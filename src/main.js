@@ -7,6 +7,7 @@ import { fmt, esc, showToast } from './js/utils.js';
 import * as player from './js/player.js';
 import * as ui from './js/ui.js';
 import { translations } from './js/translations.js';
+import { CONFIG } from './js/config.js';
 
 const isTauri = !!window.__TAURI__;
 if (!isTauri) {
@@ -23,22 +24,43 @@ const tauriShortcut= isTauri ? window.__TAURI__.globalShortcut : null;
 const tauriEvent   = isTauri ? window.__TAURI__.event : null;
 
 const invoke = tauriCore?.invoke;
+const tauriApp = isTauri ? window.__TAURI__.app : null;
 const convertFileSrc = tauriCore?.convertFileSrc || ((s) => s);
 const dialogOpen = tauriDialog?.open;
-const getCurrentWindow = tauriWindow?.getCurrentWindow;
+const tauriGetCurrent = tauriWindow?.getCurrentWindow;
 const registerShortcut = tauriShortcut?.register;
 const unregisterAll = tauriShortcut?.unregisterAll;
 const listen = tauriEvent?.listen;
 
-const appWindow = isTauri ? getCurrentWindow() : {
+// Global flag to ensure we only show once
+let windowShown = false;
+const showApp = async () => {
+  if (windowShown || !isTauri) return;
+  try {
+    const win = tauriGetCurrent();
+    await win.show();
+    windowShown = true;
+  } catch (e) {
+    console.error("Failed to show window:", e);
+  }
+};
+
+// Fallback: show window after a short timeout no matter what
+if (isTauri) setTimeout(showApp, 1000);
+
+const appWindow = isTauri ? tauriGetCurrent() : {
   minimize: () => {},
   maximize: () => {},
   unmaximize: () => {},
   close: () => {},
   isMaximized: () => Promise.resolve(false),
   setAlwaysOnTop: () => {},
-  setProgressBar: () => {}
+  setProgressBar: () => {},
+  show: () => Promise.resolve(),
 };
+
+// Show as soon as possible
+if (isTauri) showApp();
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const metaCache = new Map();
@@ -98,6 +120,7 @@ const bugModal = document.getElementById('bugModal');
 const btnCloseBug = document.getElementById('btnCloseBug');
 const btnSubmitBug = document.getElementById('btnSubmitBug');
 const bugTitle = document.getElementById('bugTitle');
+const bugCategory = document.getElementById('bugCategory');
 const bugDesc = document.getElementById('bugDesc');
 const bugError = document.getElementById('bugError');
 
@@ -159,8 +182,13 @@ bugModal?.addEventListener('click', (e) => {
   }
 });
 
+async function getSystemInfo() {
+  return ""; // システム情報は不要
+}
+
 btnSubmitBug?.addEventListener('click', async () => {
   const title = bugTitle.value.trim();
+  const category = bugCategory.value;
   const desc = bugDesc.value.trim();
 
   const dict = translations[state.lang] || translations.ja;
@@ -173,21 +201,43 @@ btnSubmitBug?.addEventListener('click', async () => {
     return;
   }
 
-  // 実際にはAPIなどで送信しますが、ここでは演出のみ行います
-  console.log('Bug Reported:', { title, desc });
-
   btnSubmitBug.disabled = true;
   btnSubmitBug.textContent = dict.sending;
 
-  setTimeout(() => {
-    showToast(dict.toast_bug_success);
-    clearBugError();
-    bugTitle.value = '';
-    bugDesc.value = '';
-    bugModal.classList.remove('active');
+  const markdown = `**Category: ${category}**\n\n**Description**\n${desc}`;
+
+  try {
+    const response = await fetch(CONFIG.REPORT_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': CONFIG.API_KEY
+      },
+      body: JSON.stringify({
+        title: title,
+        version: state.version,
+        markdown: markdown,
+        markdown_no_sys: desc
+      })
+    });
+
+    if (response.ok) {
+      showToast(dict.toast_bug_success);
+      bugTitle.value = '';
+      bugDesc.value = '';
+      bugCategory.value = 'bug';
+      bugModal.classList.remove('active');
+    } else {
+      showToast(dict.toast_error_generic);
+    }
+  } catch (err) {
+    console.error('Feedback Error:', err);
+    showToast(dict.toast_error_generic);
+  } finally {
     btnSubmitBug.disabled = false;
     btnSubmitBug.textContent = dict.submit;
-  }, 1000);
+    clearBugError();
+  }
 });
 
 function clearBugError() {
@@ -467,7 +517,7 @@ btnOpenFiles.addEventListener('click', async () => {
     const files = await dialogOpen({
       title: '音楽ファイルを選択',
       multiple: true,
-      filters: [{ name: '音楽', extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'wma'] }],
+      filters: [{ name: '音楽', extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'aiff', 'wma'] }],
     });
     if (!files) return;
     const paths = Array.isArray(files) ? files : [files];
@@ -488,7 +538,7 @@ btnOpenFolder?.addEventListener('click', async () => {
     if (!folder) return;
     const entries = await window.__TAURI__.fs.readDir(folder);
     const paths = entries
-      .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(e.name))
+      .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name))
       .map(e => `${folder}/${e.name}`);
     if (paths.length) await addPaths(paths);
     else showToast('音楽ファイルが見つかりませんでした');
@@ -882,11 +932,59 @@ document.addEventListener('keydown', e => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-audio.volume = state.volume;
-volFill.style.width = '80%';
-volThumb.style.left = '80%';
-player.buildShuffleOrder();
-setupShortcuts();
-setupTrayListeners();
-setupDragDrop();
-loadPlaylist();
+(async () => {
+  try {
+    // Basic setup from state defaults
+    audio.volume = state.volume;
+    updateVolBarUI(); // Initial UI sync
+    player.buildShuffleOrder();
+    
+    if (isTauri) {
+      // Dynamic Version Fetch
+      if (tauriApp) {
+        state.version = await tauriApp.getVersion();
+        console.log("Audion Version Initialized:", state.version);
+        const verEl = document.getElementById('appVersion');
+        if (verEl) verEl.textContent = state.version;
+      }
+      
+      await setupShortcuts();
+      await setupTrayListeners();
+      await setupDragDrop();
+
+      // Listen for files opened via "Open with..." or dynamic single-instance args
+      await tauriEvent.listen('file-open', async (event) => {
+        handleFileOpen(event.payload);
+      });
+
+      // Fetch initial args for cold boot (double-click to start)
+      const initialArgs = await invoke('get_initial_args');
+      handleFileOpen(initialArgs);
+
+      async function handleFileOpen(paths) {
+        if (Array.isArray(paths) && paths.length > 0) {
+          const filtered = paths.filter(p => !p.endsWith('.exe') && p.includes('.'));
+          if (filtered.length > 0) {
+            const oldLength = state.tracks.length;
+            await addPaths(filtered);
+            if (state.tracks.length > oldLength) {
+              loadTrack(oldLength, true);
+              const win = tauriWindow.getCurrentWindow();
+              await win.show();
+              await win.focus();
+            }
+          }
+        }
+      }
+    } else {
+      setupDragDrop(); // Browser fallback
+    }
+    
+    await loadPlaylist();
+  } catch (e) {
+    console.error("Init Error:", e);
+  } finally {
+    // Ensure window is shown even if init fails
+    if (isTauri) showApp();
+  }
+})();

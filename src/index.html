@@ -7,7 +7,27 @@
 
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="dark-theme">
+<script>
+  // Prevent theme flickering by applying the theme BEFORE body renders
+  (function() {
+    try {
+      const settings = JSON.parse(localStorage.getItem('af_settings') || '{}');
+      const theme = settings.theme || 'dark';
+      document.documentElement.classList.add(theme + '-theme');
+      
+      const savedW = localStorage.getItem('af_sidebar_w');
+      if (savedW) {
+        document.documentElement.style.setProperty('--sidebar-w', savedW);
+      }
+
+      // Also apply to body when it exists
+      window.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add(theme + '-theme');
+      });
+    } catch (e) {}
+  })();
+</script>
+<body>
 
   <!-- Custom Titlebar -->
   <div class="titlebar" data-tauri-drag-region>
@@ -291,6 +311,7 @@
           </button>
         </div>
         <p class="setting-hint" data-i18n="auto_save_hint">※設定は自動的に保存されます</p>
+        <p class="version-text" style="font-size: 10px; opacity: 0.5; margin-top: 10px; text-align: center;">Ver <span id="appVersion">0.0.0</span></p>
       </div>
     </div>
   </div>
@@ -304,7 +325,15 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="bugTitle" data-i18n="bug_form_title">タイトル</label>
+          <label for="bugCategory" data-i18n="feedback_category">カテゴリー</label>
+          <select id="bugCategory" class="select-input">
+            <option value="bug" data-i18n="category_bug">不具合報告</option>
+            <option value="request" data-i18n="category_request">要望・改善案</option>
+            <option value="other" data-i18n="category_other">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="bugTitle" data-i18n="bug_form_title">件名</label>
           <input type="text" id="bugTitle" placeholder="不具合の要約" data-i18n-placeholder="bug_form_placeholder_title" class="form-input">
         </div>
         <div class="form-group">

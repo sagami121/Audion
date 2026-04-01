@@ -4,7 +4,18 @@ use lofty::prelude::*;
 use lofty::probe::Probe;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, AppHandle, Emitter};
+use std::sync::Mutex;
+use tauri::{Manager, AppHandle, Emitter, State};
+
+struct AppArgs {
+    args: Mutex<Vec<String>>,
+}
+
+#[tauri::command]
+fn get_initial_args(state: State<'_, AppArgs>) -> Vec<String> {
+    let mut args = state.args.lock().unwrap();
+    std::mem::take(&mut *args) // Return and clear the args
+}
 
 #[tauri::command]
 fn read_audio_file(path: String) -> Result<String, String> {
@@ -73,12 +84,21 @@ fn read_text_file(path: String) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(AppArgs {
+            args: Mutex::new(std::env::args().skip(1).collect()), // Skip exe path
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            let _ = app.emit("file-open", args);
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(|app| {
-            // ... (setup logic remains same)
             let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "表示", true, None::<&str>)?;
             let play_i = MenuItem::with_id(app, "tray-play-pause", "再生 / 一時停止", true, None::<&str>)?;
@@ -131,7 +151,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![read_audio_file, get_file_metadata, save_text_file, read_text_file])
+        .invoke_handler(tauri::generate_handler![read_audio_file, get_file_metadata, save_text_file, read_text_file, get_initial_args])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -17,4 +17,5 @@ export const state = {
   lang: 'ja',
   theme: 'dark',
   speed: 1.0,
+  version: '0.0.0', // Will be updated from Tauri v2 on init
 };

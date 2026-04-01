@@ -60,6 +60,15 @@ export function updateTrackUI(track) {
   setTimeout(() => {
     const wrap = trackTitle.parentElement;
     if (trackTitle.scrollWidth > wrap.clientWidth + 2) trackTitle.classList.add('marquee');
+    
+    // Add format badge if not already there
+    const ext = track.path.split('.').pop().toUpperCase();
+    if (ext && ext.length < 5) {
+      const badge = document.createElement('span');
+      badge.className = 'pl-badge';
+      badge.textContent = ext;
+      trackTitle.appendChild(badge);
+    }
   }, 80);
 }
 
@@ -81,7 +90,10 @@ export function createPlaylistRow(index, track, onRowClick) {
       <span class="pl-bar"></span><span class="pl-bar"></span><span class="pl-bar"></span>
     </span>
     <div class="pl-info">
-      <span class="pl-name" title="${esc(displayName)}">${esc(displayName)}</span>
+      <span class="pl-name" title="${esc(displayName)}">
+        ${esc(displayName)}
+        <span class="pl-badge">${esc(track.path.split('.').pop().toUpperCase())}</span>
+      </span>
       ${displaySub ? `<span class="pl-sub">${esc(displaySub)}</span>` : ''}
     </div>
     <span class="pl-dur">${track.duration ? fmt(track.duration) : '—'}</span>
