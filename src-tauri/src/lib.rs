@@ -4,7 +4,7 @@ use lofty::prelude::*;
 use lofty::probe::Probe;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, AppHandle};
+use tauri::{Manager, AppHandle, Emitter};
 
 #[tauri::command]
 fn read_audio_file(path: String) -> Result<String, String> {
