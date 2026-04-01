@@ -1,7 +1,7 @@
 # Audion
 
 <div align="center">
-  <img src="app_icon.png" width="128" height="128" alt="Audion Icon">
+  <img src="img/app_icon.png" width="128" height="128" alt="Audion Icon">
   <br>
   <p><strong>Tauri Base Music Player</strong></p>
 

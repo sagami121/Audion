@@ -24,5 +24,3 @@ dist-ssr
 *.sw?
 
 audion-worker.js
-app_icon.jpg
-audio_file.jpg
