@@ -81,7 +81,19 @@ pub fn run() {
             // ... (setup logic remains same)
             let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "表示", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+            let play_i = MenuItem::with_id(app, "tray-play-pause", "再生 / 一時停止", true, None::<&str>)?;
+            let next_i = MenuItem::with_id(app, "tray-next", "次の曲", true, None::<&str>)?;
+            let prev_i = MenuItem::with_id(app, "tray-prev", "前の曲", true, None::<&str>)?;
+            let sep = tauri::menu::PredefinedMenuItem::separator(app)?;
+
+            let menu = Menu::with_items(app, &[
+                &play_i,
+                &next_i,
+                &prev_i,
+                &sep,
+                &show_i,
+                &quit_i
+            ])?;
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -96,6 +108,9 @@ pub fn run() {
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
+                    }
+                    "tray-play-pause" | "tray-next" | "tray-prev" => {
+                        let _ = app.emit(event.id.as_ref(), ());
                     }
                     _ => {}
                 })

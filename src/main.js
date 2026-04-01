@@ -6,11 +6,13 @@ import { state } from './js/state.js';
 import { fmt, esc, showToast } from './js/utils.js';
 import * as player from './js/player.js';
 import * as ui from './js/ui.js';
+import { translations } from './js/translations.js';
 
 const { invoke, convertFileSrc } = window.__TAURI__.core;
 const { open: dialogOpen } = window.__TAURI__.dialog;
 const { getCurrentWindow } = window.__TAURI__.window;
 const { register: registerShortcut, unregisterAll } = window.__TAURI__.globalShortcut;
+const { listen } = window.__TAURI__.event;
 
 const appWindow = getCurrentWindow();
 
@@ -52,6 +54,11 @@ const dropHint    = document.getElementById('dropHint');
 const dropOverlay = document.getElementById('dropOverlay');
 const plSearch    = document.getElementById('plSearch');
 const sidebarResizer = document.getElementById('sidebarResizer');
+const speedSlider  = document.getElementById('speedSlider');
+const speedLbl     = document.getElementById('speedLbl');
+const langSelect   = document.getElementById('langSelect');
+const btnThemeDark = document.getElementById('btnThemeDark');
+const btnThemeLight= document.getElementById('btnThemeLight');
 
 // Titlebar
 const tbMin       = document.getElementById('tbMin');
@@ -132,8 +139,9 @@ btnSubmitBug?.addEventListener('click', async () => {
   const title = bugTitle.value.trim();
   const desc = bugDesc.value.trim();
 
+  const dict = translations[state.lang] || translations.ja;
   if (!title || !desc) {
-    showBugError('タイトルと詳細を入力してください');
+    showBugError(dict.toast_bug_error);
     if (!title) bugTitle.classList.add('input-error');
     if (!desc) bugDesc.classList.add('input-error');
     if (!title) bugTitle.focus();
@@ -145,16 +153,16 @@ btnSubmitBug?.addEventListener('click', async () => {
   console.log('Bug Reported:', { title, desc });
   
   btnSubmitBug.disabled = true;
-  btnSubmitBug.textContent = '送信中...';
+  btnSubmitBug.textContent = dict.sending;
   
   setTimeout(() => {
-    showToast('報告を送信しました。ありがとうございます！');
+    showToast(dict.toast_bug_success);
     clearBugError();
     bugTitle.value = '';
     bugDesc.value = '';
     bugModal.classList.remove('active');
     btnSubmitBug.disabled = false;
-    btnSubmitBug.textContent = '送信する';
+    btnSubmitBug.textContent = dict.submit;
   }, 1000);
 });
 
@@ -187,6 +195,67 @@ checkOnTop?.addEventListener('change', (e) => {
   localStorage.setItem('af_on_top', state.alwaysOnTop);
 });
 
+// --- Theme & Language ---
+btnThemeDark?.addEventListener('click', () => setTheme('dark'));
+btnThemeLight?.addEventListener('click', () => setTheme('light'));
+langSelect?.addEventListener('change', (e) => updateLanguage(e.target.value));
+
+function setTheme(theme) {
+  state.theme = theme;
+  document.body.classList.remove('dark-theme', 'light-theme');
+  document.body.classList.add(`${theme}-theme`);
+  
+  btnThemeDark?.classList.toggle('active', theme === 'dark');
+  btnThemeLight?.classList.toggle('active', theme === 'light');
+  
+  saveSettings();
+}
+
+function updateLanguage(lang) {
+  state.lang = lang;
+  const dict = translations[lang] || translations.ja;
+  
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) el.innerHTML = dict[key];
+  });
+  
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key]) el.placeholder = dict[key];
+  });
+  
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (dict[key]) el.title = dict[key];
+  });
+
+  document.querySelectorAll('[data-i18n-label]').forEach(el => {
+    const key = el.getAttribute('data-i18n-label');
+    if (dict[key]) el.setAttribute('aria-label', dict[key]);
+  });
+
+  if (langSelect) langSelect.value = lang;
+  saveSettings();
+  
+  // Update playlist count with new language
+  updateCount();
+}
+
+// --- Playback Speed ---
+speedSlider?.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value);
+  setSpeed(val);
+});
+
+function setSpeed(val) {
+  state.speed = val;
+  audio.playbackRate = val;
+  if (speedLbl) speedLbl.textContent = `${val.toFixed(1)}x`;
+  if (speedSlider) speedSlider.value = val;
+  saveSettings();
+}
+
 // ─── Persistence ──────────────────────────────────────────────────────────────
 function saveSettings() {
   const settings = {
@@ -196,6 +265,9 @@ function saveSettings() {
     current: state.current,
     currentTime: audio.currentTime,
     muted: state.muted,
+    lang: state.lang,
+    theme: state.theme,
+    speed: state.speed,
   };
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
@@ -235,6 +307,14 @@ async function loadPlaylist() {
       audio.currentTime = settings.currentTime;
     }
   }
+
+  if (settings.lang) updateLanguage(settings.lang);
+  else updateLanguage('ja');
+
+  if (settings.theme) setTheme(settings.theme);
+  else setTheme('dark');
+
+  if (settings.speed) setSpeed(settings.speed);
 
   // Restore Sidebar Width
   const savedW = localStorage.getItem('af_sidebar_w');
@@ -295,12 +375,19 @@ async function setupShortcuts() {
   }
 }
 
+async function setupTrayListeners() {
+  await listen('tray-play-pause', () => togglePlay());
+  await listen('tray-next', () => playNext());
+  await listen('tray-prev', () => playPrev());
+}
+
 // ─── File Operations ─────────────────────────────────────────────────────────
 btnSavePlaylist?.addEventListener('click', async () => {
-  if (!state.tracks.length) { showToast('保存する曲がありません'); return; }
+  const dict = translations[state.lang] || translations.ja;
+  if (!state.tracks.length) { showToast(dict.toast_error_play); return; }
   try {
     const filePath = await window.__TAURI__.dialog.save({
-      title: 'プレイリストを保存',
+      title: dict.save_playlist,
       defaultPath: 'playlist.json',
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
     });
@@ -316,17 +403,18 @@ btnSavePlaylist?.addEventListener('click', async () => {
     const jsonStr = JSON.stringify(playlistData, null, 2);
     // Use Rust command instead of JS plugin
     await invoke('save_text_file', { path: filePath, content: jsonStr });
-    showToast('プレイリストを保存しました');
+    showToast(dict.toast_saved);
   } catch (e) { 
     console.error('Save failed', e);
-    showToast('保存に失敗しました');
+    showToast(dict.toast_error_generic);
   }
 });
 
 btnLoadPlaylist?.addEventListener('click', async () => {
+  const dict = translations[state.lang] || translations.ja;
   try {
     const file = await dialogOpen({
-      title: 'プレイリストを読み込む',
+      title: dict.load_playlist,
       multiple: false,
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
     });
@@ -340,37 +428,39 @@ btnLoadPlaylist?.addEventListener('click', async () => {
       const paths = tracks.map(t => t.path).filter(p => !!p);
       if (paths.length) {
         await addPaths(paths);
-        showToast(`${paths.length} 曲を読み込みました`);
+        showToast(`${paths.length}${dict.toast_loaded}`);
       }
     } else {
       throw new Error('Invalid format');
     }
   } catch (e) { 
     console.error('Load failed', e);
-    showToast('読み込みに失敗しました');
+    showToast(dict.toast_error_play);
   }
 });
 
 btnOpenFiles.addEventListener('click', async () => {
+  const dict = translations[state.lang] || translations.ja;
   try {
     const files = await dialogOpen({
-      title: '音楽ファイルを選択',
+      title: dict.select_music,
       multiple: true,
-      filters: [{ name: '音楽', extensions: ['mp3','flac','wav','ogg','aac','m4a','opus','wma'] }],
+      filters: [{ name: dict.music, extensions: ['mp3','flac','wav','ogg','aac','m4a','opus','wma'] }],
     });
     if (!files) return;
     const paths = Array.isArray(files) ? files : [files];
     await addPaths(paths);
   } catch (e) {
     console.error(e);
-    showToast('ファイルを開けませんでした');
+    showToast(dict.toast_error_open);
   }
 });
 
 btnOpenFolder?.addEventListener('click', async () => {
+  const dict = translations[state.lang] || translations.ja;
   try {
     const folder = await dialogOpen({
-      title: 'フォルダを選択',
+      title: dict.select_folder,
       directory: true,
       multiple: false,
     });
@@ -380,10 +470,10 @@ btnOpenFolder?.addEventListener('click', async () => {
       .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(e.name))
       .map(e => `${folder}/${e.name}`);
     if (paths.length) await addPaths(paths);
-    else showToast('音楽ファイルが見つかりませんでした');
+    else showToast(dict.toast_error_none);
   } catch (e) {
     console.error(e);
-    showToast('フォルダを開けませんでした');
+    showToast(dict.toast_error_folder);
   }
 });
 
@@ -395,7 +485,7 @@ btnClearAll.addEventListener('click', () => {
   updateCount();
   dropHint.classList.remove('hidden');
   player.savePlaylist();
-  showToast('プレイリストをクリアしました');
+  showToast(translations[state.lang].toast_cleared);
 });
 
 async function addPaths(paths, isInitial = false) {
@@ -438,12 +528,17 @@ async function addPaths(paths, isInitial = false) {
   }
   updateCount();
   if (added > 0) {
+    const dict = translations[state.lang] || translations.ja;
     dropHint.classList.add('hidden');
-    if (!isInitial) showToast(`${added} 曲を追加しました${skipped ? `（${skipped}曲重複スキップ）` : ''}`);
+    if (!isInitial) {
+      let msg = `${added}${dict.toast_added}`;
+      if (skipped) msg += ` (${skipped}${dict.toast_skipped})`;
+      showToast(msg);
+    }
     if (state.current === -1) loadTrack(0, false);
     player.savePlaylist();
   } else if (skipped > 0 && !isInitial) {
-    showToast(`${skipped} 曲すべて重複していたためスキップしました`);
+    showToast(translations[state.lang].toast_all_skipped);
   }
   player.buildShuffleOrder();
 }
@@ -493,7 +588,16 @@ function removeTrack(index) {
 }
 
 function updateCount() {
-  plCount.textContent = `${state.tracks.length} 曲`;
+  const count = state.tracks.length;
+  if (state.lang === 'en') {
+    plCount.textContent = `${count} ${count === 1 ? 'track' : 'tracks'}`;
+  } else if (state.lang === 'ko') {
+    plCount.textContent = `${count} 곡`;
+  } else if (state.lang === 'zh') {
+    plCount.textContent = `${count} 首`;
+  } else {
+    plCount.textContent = `${count} 曲`;
+  }
 }
 
 plSearch?.addEventListener('input', (e) => {
@@ -513,13 +617,14 @@ function loadTrack(index, autoplay = false) {
   albumArt.classList.remove('spinning');
   albumArt.classList.remove('paused');
   artGlow.classList.remove('active');
+  audio.playbackRate = state.speed; 
   if (autoplay) player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
   else ui.updatePlayUI(false);
 }
 
 // ─── Playback ─────────────────────────────────────────────────────────────────
 function togglePlay() {
-  if (!state.tracks.length) { showToast('曲を追加してください'); return; }
+  if (!state.tracks.length) { showToast(translations[state.lang].toast_no_tracks || 'Please add tracks'); return; }
   if (state.current === -1) { loadTrack(0, true); return; }
   state.playing ? player.pauseAudio(audio, albumArt, playlist) : player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
 }
@@ -608,7 +713,7 @@ audio.addEventListener('ended', () => {
 
 audio.addEventListener('error', () => { 
   if (state.current !== -1 && audio.src) {
-    showToast('再生エラーが発生しました'); 
+    showToast(translations[state.lang].toast_error_play); 
   }
 });
 
@@ -622,7 +727,8 @@ shuffleBtn.addEventListener('click', () => {
   shuffleBtn.classList.toggle('active', state.shuffle);
   player.buildShuffleOrder();
   saveSettings();
-  showToast(state.shuffle ? 'シャッフル ON' : 'シャッフル OFF');
+  const dict = translations[state.lang] || translations.ja;
+  showToast(state.shuffle ? dict.shuffle_on : dict.shuffle_off);
 });
 
 repeatBtn.addEventListener('click', () => {
@@ -630,7 +736,8 @@ repeatBtn.addEventListener('click', () => {
   state.repeat = next[state.repeat];
   repeatBtn.classList.toggle('active', state.repeat !== 'none');
   repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
-  const labels = { none: 'リピートなし', all: '全曲リピート', one: '1曲リピート' };
+  const dict = translations[state.lang] || translations.ja;
+  const labels = { none: dict.repeat_none, all: dict.repeat_all, one: dict.repeat_one };
   saveSettings();
   showToast(labels[state.repeat]);
 });
@@ -728,7 +835,7 @@ document.addEventListener('drop', async e => {
     .filter(f => /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(f.name))
     .map(f => f.path);
   if (paths.length) await addPaths(paths);
-  else showToast('音楽ファイルではありません');
+  else showToast(translations[state.lang].toast_error_generic);
 });
 
 // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
@@ -756,4 +863,5 @@ volFill.style.width  = '80%';
 volThumb.style.left  = '80%';
 player.buildShuffleOrder();
 setupShortcuts();
+setupTrayListeners();
 loadPlaylist();

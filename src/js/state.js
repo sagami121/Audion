@@ -14,4 +14,7 @@ export const state = {
   alwaysOnTop: false,
   miniPlayer: false,
   shuffleOrder: [],
+  lang: 'ja',
+  theme: 'dark',
+  speed: 1.0,
 };
