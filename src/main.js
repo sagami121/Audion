@@ -8,49 +8,73 @@ import * as player from './js/player.js';
 import * as ui from './js/ui.js';
 import { translations } from './js/translations.js';
 
-const { invoke, convertFileSrc } = window.__TAURI__.core;
-const { open: dialogOpen } = window.__TAURI__.dialog;
-const { getCurrentWindow } = window.__TAURI__.window;
-const { register: registerShortcut, unregisterAll } = window.__TAURI__.globalShortcut;
-const { listen } = window.__TAURI__.event;
+const isTauri = !!window.__TAURI__;
+if (!isTauri) {
+  console.warn("Audion is running in a browser. Native features (Tray, File System, Metadata) will be disabled.");
+  document.addEventListener('DOMContentLoaded', () => {
+    showToast("Please run 'npm run tauri dev' for full functionality", 5000);
+  });
+}
 
-const appWindow = getCurrentWindow();
+const tauriCore    = isTauri ? window.__TAURI__.core : null;
+const tauriDialog  = isTauri ? window.__TAURI__.dialog : null;
+const tauriWindow  = isTauri ? window.__TAURI__.window : null;
+const tauriShortcut= isTauri ? window.__TAURI__.globalShortcut : null;
+const tauriEvent   = isTauri ? window.__TAURI__.event : null;
+
+const invoke = tauriCore?.invoke;
+const convertFileSrc = tauriCore?.convertFileSrc || ((s) => s);
+const dialogOpen = tauriDialog?.open;
+const getCurrentWindow = tauriWindow?.getCurrentWindow;
+const registerShortcut = tauriShortcut?.register;
+const unregisterAll = tauriShortcut?.unregisterAll;
+const listen = tauriEvent?.listen;
+
+const appWindow = isTauri ? getCurrentWindow() : {
+  minimize: () => {},
+  maximize: () => {},
+  unmaximize: () => {},
+  close: () => {},
+  isMaximized: () => Promise.resolve(false),
+  setAlwaysOnTop: () => {},
+  setProgressBar: () => {}
+};
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const metaCache = new Map();
 
 // ─── DOM ──────────────────────────────────────────────────────────────────────
-const audio       = document.getElementById('audio');
-const playBtn     = document.getElementById('playBtn');
-const prevBtn     = document.getElementById('prevBtn');
-const nextBtn     = document.getElementById('nextBtn');
-const shuffleBtn  = document.getElementById('shuffleBtn');
-const repeatBtn   = document.getElementById('repeatBtn');
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('playBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const shuffleBtn = document.getElementById('shuffleBtn');
+const repeatBtn = document.getElementById('repeatBtn');
 const repeatBadge = document.getElementById('repeatBadge');
-const muteBtn     = document.getElementById('muteBtn');
-const volIcon     = document.getElementById('volIcon');
-const seeker      = document.getElementById('seeker');
-const seekFill    = document.getElementById('seekFill');
-const seekBuf     = document.getElementById('seekBuf');
-const seekThumb   = document.getElementById('seekThumb');
-const curTime     = document.getElementById('curTime');
-const durTime     = document.getElementById('durTime');
-const volBar      = document.getElementById('volBar');
-const volFill     = document.getElementById('volFill');
-const volThumb    = document.getElementById('volThumb');
-const trackTitle  = document.getElementById('trackTitle');
-const albumArt    = document.getElementById('albumArt');
-const artGlow     = document.getElementById('artGlow');
+const muteBtn = document.getElementById('muteBtn');
+const volIcon = document.getElementById('volIcon');
+const seeker = document.getElementById('seeker');
+const seekFill = document.getElementById('seekFill');
+const seekBuf = document.getElementById('seekBuf');
+const seekThumb = document.getElementById('seekThumb');
+const curTime = document.getElementById('curTime');
+const durTime = document.getElementById('durTime');
+const volBar = document.getElementById('volBar');
+const volFill = document.getElementById('volFill');
+const volThumb = document.getElementById('volThumb');
+const trackTitle = document.getElementById('trackTitle');
+const albumArt = document.getElementById('albumArt');
+const artGlow = document.getElementById('artGlow');
 const vinylCenter = document.getElementById('vinylCenter');
-const playlist    = document.getElementById('playlist');
-const plCount     = document.getElementById('playlistCount');
-const btnOpenFiles= document.getElementById('btnOpenFiles');
-const btnOpenFolder=document.getElementById('btnOpenFolder');
+const playlist = document.getElementById('playlist');
+const plCount = document.getElementById('playlistCount');
+const btnOpenFiles = document.getElementById('btnOpenFiles');
+const btnOpenFolder = document.getElementById('btnOpenFolder');
 const btnClearAll = document.getElementById('btnClearAll');
 const btnSavePlaylist = document.getElementById('btnSavePlaylist');
 const btnLoadPlaylist = document.getElementById('btnLoadPlaylist');
 const btnMiniMode = document.getElementById('btnMiniMode');
-const dropHint    = document.getElementById('dropHint');
+const dropHint = document.getElementById('dropHint');
 const dropOverlay = document.getElementById('dropOverlay');
 const plSearch    = document.getElementById('plSearch');
 const sidebarResizer = document.getElementById('sidebarResizer');
@@ -61,14 +85,14 @@ const btnThemeDark = document.getElementById('btnThemeDark');
 const btnThemeLight= document.getElementById('btnThemeLight');
 
 // Titlebar
-const tbMin       = document.getElementById('tbMin');
-const tbMax       = document.getElementById('tbMax');
-const tbClose     = document.getElementById('tbClose');
+const tbMin = document.getElementById('tbMin');
+const tbMax = document.getElementById('tbMax');
+const tbClose = document.getElementById('tbClose');
 // Settings
 const btnSettings = document.getElementById('btnSettings');
 const settingsModal = document.getElementById('settingsModal');
 const btnCloseSettings = document.getElementById('btnCloseSettings');
-const checkOnTop  = document.getElementById('checkOnTop');
+const checkOnTop = document.getElementById('checkOnTop');
 const btnReportBug = document.getElementById('btnReportBug');
 const bugModal = document.getElementById('bugModal');
 const btnCloseBug = document.getElementById('btnCloseBug');
@@ -151,10 +175,10 @@ btnSubmitBug?.addEventListener('click', async () => {
 
   // 実際にはAPIなどで送信しますが、ここでは演出のみ行います
   console.log('Bug Reported:', { title, desc });
-  
+
   btnSubmitBug.disabled = true;
   btnSubmitBug.textContent = dict.sending;
-  
+
   setTimeout(() => {
     showToast(dict.toast_bug_success);
     clearBugError();
@@ -280,7 +304,7 @@ async function loadPlaylist() {
       if (paths.length) await addPaths(paths, true);
     } catch (e) { console.error('Load failed', e); }
   }
-  
+
   // Restore Settings
   state.alwaysOnTop = localStorage.getItem('af_on_top') === 'true';
   if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
@@ -325,8 +349,8 @@ async function loadPlaylist() {
 
 function updateVolBarUI() {
   const ratio = state.volume;
-  volFill.style.width  = (ratio * 100) + '%';
-  volThumb.style.left  = (ratio * 100) + '%';
+  volFill.style.width = (ratio * 100) + '%';
+  volThumb.style.left = (ratio * 100) + '%';
   volBar.setAttribute('aria-valuenow', Math.round(ratio * 100));
   updateVolIcon();
 }
@@ -335,13 +359,13 @@ function updateVolBarUI() {
 async function setupShortcuts() {
   try {
     await unregisterAll();
-    
+
     // Register Play/Pause
     const playPauseKeys = ['MediaPlayPause', 'MediaPlay', 'MediaPause'];
     for (const k of playPauseKeys) {
       try {
         await registerShortcut(k, (e) => { if (e.state === 'Pressed') togglePlay(); });
-      } catch {}
+      } catch { }
     }
 
     // Register Next
@@ -349,7 +373,7 @@ async function setupShortcuts() {
     for (const k of nextKeys) {
       try {
         await registerShortcut(k, (e) => { if (e.state === 'Pressed') playNext(); });
-      } catch {}
+      } catch { }
     }
 
     // Register Prev
@@ -357,17 +381,17 @@ async function setupShortcuts() {
     for (const k of prevKeys) {
       try {
         await registerShortcut(k, (e) => { if (e.state === 'Pressed') playPrev(); });
-      } catch {}
+      } catch { }
     }
 
     // Register Stop
     const stopKeys = ['MediaStop', 'MediaStopTrack'];
     for (const k of stopKeys) {
       try {
-        await registerShortcut(k, (e) => { 
+        await registerShortcut(k, (e) => {
           if (e.state === 'Pressed') resetPlayer();
         });
-      } catch {}
+      } catch { }
     }
 
   } catch (e) {
@@ -392,14 +416,14 @@ btnSavePlaylist?.addEventListener('click', async () => {
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
     });
     if (!filePath) return;
-    
+
     const playlistData = state.tracks.map(t => ({
       path: t.path,
       name: t.name,
       artist: t.artist || '',
       album: t.album || ''
     }));
-    
+
     const jsonStr = JSON.stringify(playlistData, null, 2);
     // Use Rust command instead of JS plugin
     await invoke('save_text_file', { path: filePath, content: jsonStr });
@@ -411,56 +435,53 @@ btnSavePlaylist?.addEventListener('click', async () => {
 });
 
 btnLoadPlaylist?.addEventListener('click', async () => {
-  const dict = translations[state.lang] || translations.ja;
   try {
     const file = await dialogOpen({
-      title: dict.load_playlist,
+      title: 'プレイリストを読み込む',
       multiple: false,
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
     });
     if (!file) return;
-    
+
     // Use Rust command instead of JS plugin
     const content = await invoke('read_text_file', { path: file });
     const tracks = JSON.parse(content);
-    
+
     if (Array.isArray(tracks)) {
       const paths = tracks.map(t => t.path).filter(p => !!p);
       if (paths.length) {
         await addPaths(paths);
-        showToast(`${paths.length}${dict.toast_loaded}`);
+        showToast(`${paths.length} 曲を読み込みました`);
       }
     } else {
       throw new Error('Invalid format');
     }
-  } catch (e) { 
+  } catch (e) {
     console.error('Load failed', e);
-    showToast(dict.toast_error_play);
+    showToast('読み込みに失敗しました');
   }
 });
 
 btnOpenFiles.addEventListener('click', async () => {
-  const dict = translations[state.lang] || translations.ja;
   try {
     const files = await dialogOpen({
-      title: dict.select_music,
+      title: '音楽ファイルを選択',
       multiple: true,
-      filters: [{ name: dict.music, extensions: ['mp3','flac','wav','ogg','aac','m4a','opus','wma'] }],
+      filters: [{ name: '音楽', extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'wma'] }],
     });
     if (!files) return;
     const paths = Array.isArray(files) ? files : [files];
     await addPaths(paths);
   } catch (e) {
     console.error(e);
-    showToast(dict.toast_error_open);
+    showToast('ファイルを開けませんでした');
   }
 });
 
 btnOpenFolder?.addEventListener('click', async () => {
-  const dict = translations[state.lang] || translations.ja;
   try {
     const folder = await dialogOpen({
-      title: dict.select_folder,
+      title: 'フォルダを選択',
       directory: true,
       multiple: false,
     });
@@ -470,10 +491,10 @@ btnOpenFolder?.addEventListener('click', async () => {
       .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(e.name))
       .map(e => `${folder}/${e.name}`);
     if (paths.length) await addPaths(paths);
-    else showToast(dict.toast_error_none);
+    else showToast('音楽ファイルが見つかりませんでした');
   } catch (e) {
     console.error(e);
-    showToast(dict.toast_error_folder);
+    showToast('フォルダを開けませんでした');
   }
 });
 
@@ -485,7 +506,7 @@ btnClearAll.addEventListener('click', () => {
   updateCount();
   dropHint.classList.remove('hidden');
   player.savePlaylist();
-  showToast(translations[state.lang].toast_cleared);
+  showToast('プレイリストをクリアしました');
 });
 
 async function addPaths(paths, isInitial = false) {
@@ -515,11 +536,11 @@ async function addPaths(paths, isInitial = false) {
         duration: 0,
         addedAt: Date.now()
       });
-      
+
       const idx = state.tracks.length - 1;
       const row = ui.createPlaylistRow(idx, state.tracks[idx], onPlaylistRowClick);
       playlist.appendChild(row);
-      
+
       player.preloadMeta(idx, path, playlist);
       added++;
     } catch (e) {
@@ -549,7 +570,7 @@ let normalSize = { width: 1000, height: 660 };
 async function toggleMiniMode() {
   state.miniPlayer = !state.miniPlayer;
   document.body.classList.toggle('mini-view', state.miniPlayer);
-  
+
   if (state.miniPlayer) {
     normalSize = await appWindow.innerSize();
     await appWindow.setSize(new window.__TAURI__.window.LogicalSize(360, 180));
@@ -588,16 +609,7 @@ function removeTrack(index) {
 }
 
 function updateCount() {
-  const count = state.tracks.length;
-  if (state.lang === 'en') {
-    plCount.textContent = `${count} ${count === 1 ? 'track' : 'tracks'}`;
-  } else if (state.lang === 'ko') {
-    plCount.textContent = `${count} 곡`;
-  } else if (state.lang === 'zh') {
-    plCount.textContent = `${count} 首`;
-  } else {
-    plCount.textContent = `${count} 曲`;
-  }
+  plCount.textContent = `${state.tracks.length} 曲`;
 }
 
 plSearch?.addEventListener('input', (e) => {
@@ -617,14 +629,13 @@ function loadTrack(index, autoplay = false) {
   albumArt.classList.remove('spinning');
   albumArt.classList.remove('paused');
   artGlow.classList.remove('active');
-  audio.playbackRate = state.speed; 
   if (autoplay) player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
   else ui.updatePlayUI(false);
 }
 
 // ─── Playback ─────────────────────────────────────────────────────────────────
 function togglePlay() {
-  if (!state.tracks.length) { showToast(translations[state.lang].toast_no_tracks || 'Please add tracks'); return; }
+  if (!state.tracks.length) { showToast('曲を追加してください'); return; }
   if (state.current === -1) { loadTrack(0, true); return; }
   state.playing ? player.pauseAudio(audio, albumArt, playlist) : player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
 }
@@ -657,12 +668,12 @@ function playPrev() {
 function resetPlayer() {
   state.current = -1;
   state.playing = false;
-  
+
   // 完全なオーディオリセット
   audio.pause();
   audio.removeAttribute('src'); // srcを削除
   audio.load(); // 読み込みを中断
-  
+
   trackTitle.textContent = '曲を選択してください';
   trackTitle.classList.remove('marquee');
   const trackSub = document.getElementById('trackSub');
@@ -687,12 +698,12 @@ function resetPlayer() {
 audio.addEventListener('timeupdate', () => {
   if (state.seekDrag || !audio.duration) return;
   const pct = (audio.currentTime / audio.duration) * 100;
-  seekFill.style.width  = pct + '%';
-  seekThumb.style.left  = pct + '%';
+  seekFill.style.width = pct + '%';
+  seekThumb.style.left = pct + '%';
   seeker.setAttribute('aria-valuenow', Math.round(pct));
   curTime.textContent = fmt(audio.currentTime);
   appWindow.setProgressBar({ progress: pct / 100 });
-  
+
   if (Math.floor(audio.currentTime) % 5 === 0) saveSettings();
 });
 
@@ -705,15 +716,15 @@ audio.addEventListener('progress', () => {
 });
 
 audio.addEventListener('ended', () => {
-  if (state.repeat === 'one')       { audio.currentTime = 0; player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist); }
-  else if (state.repeat === 'all')  { playNext(); }
+  if (state.repeat === 'one') { audio.currentTime = 0; player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist); }
+  else if (state.repeat === 'all') { playNext(); }
   else if (state.current < state.tracks.length - 1) { playNext(); }
   else { state.playing = false; ui.updatePlayUI(false); albumArt.classList.remove('spinning'); ui.updateActive(playlist); }
 });
 
-audio.addEventListener('error', () => { 
+audio.addEventListener('error', () => {
   if (state.current !== -1 && audio.src) {
-    showToast(translations[state.lang].toast_error_play); 
+    showToast('再生エラーが発生しました');
   }
 });
 
@@ -727,8 +738,7 @@ shuffleBtn.addEventListener('click', () => {
   shuffleBtn.classList.toggle('active', state.shuffle);
   player.buildShuffleOrder();
   saveSettings();
-  const dict = translations[state.lang] || translations.ja;
-  showToast(state.shuffle ? dict.shuffle_on : dict.shuffle_off);
+  showToast(state.shuffle ? 'シャッフル ON' : 'シャッフル OFF');
 });
 
 repeatBtn.addEventListener('click', () => {
@@ -736,8 +746,7 @@ repeatBtn.addEventListener('click', () => {
   state.repeat = next[state.repeat];
   repeatBtn.classList.toggle('active', state.repeat !== 'none');
   repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
-  const dict = translations[state.lang] || translations.ja;
-  const labels = { none: dict.repeat_none, all: dict.repeat_all, one: dict.repeat_one };
+  const labels = { none: 'リピートなし', all: '全曲リピート', one: '1曲リピート' };
   saveSettings();
   showToast(labels[state.repeat]);
 });
@@ -754,25 +763,25 @@ let seekRAF;
 function scrub(e) {
   const r = seeker.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-  
+
   cancelAnimationFrame(seekRAF);
   seekRAF = requestAnimationFrame(() => {
-    seekFill.style.width  = (ratio * 100) + '%';
-    seekThumb.style.left  = (ratio * 100) + '%';
-    if (audio.duration) { 
-      audio.currentTime = ratio * audio.duration; 
-      curTime.textContent = fmt(audio.currentTime); 
+    seekFill.style.width = (ratio * 100) + '%';
+    seekThumb.style.left = (ratio * 100) + '%';
+    if (audio.duration) {
+      audio.currentTime = ratio * audio.duration;
+      curTime.textContent = fmt(audio.currentTime);
     }
   });
 }
-seeker.addEventListener('mousedown',  e => { state.seekDrag = true; scrub(e); });
+seeker.addEventListener('mousedown', e => { state.seekDrag = true; scrub(e); });
 document.addEventListener('mousemove', e => { if (state.seekDrag) scrub(e); });
-document.addEventListener('mouseup',   () => { state.seekDrag = false; saveSettings(); });
+document.addEventListener('mouseup', () => { state.seekDrag = false; saveSettings(); });
 
 seeker.addEventListener('keydown', e => {
   if (!audio.duration) return;
   if (e.key === 'ArrowRight') audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
-  if (e.key === 'ArrowLeft')  audio.currentTime = Math.max(0, audio.currentTime - 5);
+  if (e.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
   saveSettings();
 });
 
@@ -782,15 +791,15 @@ function setVol(e) {
   const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
   state.volume = ratio; state.muted = ratio === 0;
   audio.volume = ratio;
-  volFill.style.width  = (ratio * 100) + '%';
-  volThumb.style.left  = (ratio * 100) + '%';
+  volFill.style.width = (ratio * 100) + '%';
+  volThumb.style.left = (ratio * 100) + '%';
   volBar.setAttribute('aria-valuenow', Math.round(ratio * 100));
   updateVolIcon();
   saveSettings();
 }
-volBar.addEventListener('mousedown',  e => { state.volDrag = true; setVol(e); });
+volBar.addEventListener('mousedown', e => { state.volDrag = true; setVol(e); });
 document.addEventListener('mousemove', e => { if (state.volDrag) setVol(e); });
-document.addEventListener('mouseup',   () => { state.volDrag = false; });
+document.addEventListener('mouseup', () => { state.volDrag = false; });
 
 function updateVolIcon() {
   const v = state.muted ? 0 : state.volume;
@@ -809,45 +818,60 @@ function updateVolIcon() {
 }
 
 // ─── Drag & Drop ──────────────────────────────────────────────────────────────
-let dragCounter = 0;
-document.addEventListener('dragenter', e => {
-  dragCounter++;
-  e.preventDefault();
-  dropOverlay.classList.add('active');
-});
+async function setupDragDrop() {
+  if (isTauri && listen) {
+    await listen('tauri://drag-drop', async (event) => {
+      dropOverlay.classList.remove('active');
+      const { paths } = event.payload;
+      if (paths && paths.length) {
+        const musicPaths = paths.filter(p => /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(p));
+        if (musicPaths.length) await addPaths(musicPaths);
+        else showToast(translations[state.lang].toast_error_generic);
+      }
+    });
 
-document.addEventListener('dragleave', e => {
-  dragCounter--;
-  if (dragCounter === 0) dropOverlay.classList.remove('active');
-});
+    await listen('tauri://drag-enter', () => {
+      dropOverlay.classList.add('active');
+    });
 
-document.addEventListener('dragover', e => {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-});
-
-document.addEventListener('drop', async e => {
-  e.preventDefault();
-  dragCounter = 0;
-  dropOverlay.classList.remove('active');
-  if (!e.dataTransfer || !e.dataTransfer.files) return;
-  const paths = Array.from(e.dataTransfer.files)
-    .filter(f => /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(f.name))
-    .map(f => f.path);
-  if (paths.length) await addPaths(paths);
-  else showToast(translations[state.lang].toast_error_generic);
-});
+    await listen('tauri://drag-leave', () => {
+      dropOverlay.classList.remove('active');
+    });
+  } else {
+    // Fallback for browser testing
+    let dragCounter = 0;
+    document.addEventListener('dragenter', e => {
+      dragCounter++;
+      e.preventDefault();
+      dropOverlay.classList.add('active');
+    });
+    document.addEventListener('dragleave', e => {
+      dragCounter--;
+      if (dragCounter === 0) dropOverlay.classList.remove('active');
+    });
+    document.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    document.addEventListener('drop', e => {
+      e.preventDefault();
+      dragCounter = 0;
+      dropOverlay.classList.remove('active');
+      showToast("Absolute paths are only available in Tauri. Use the 'Files' button or run via 'npm run tauri dev'.", 5000);
+    });
+  }
+}
 
 // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
   switch (e.key) {
     case ' ': case 'k': e.preventDefault(); togglePlay(); break;
     case 'ArrowRight':
-      if (!e.target.closest('.seeker')) { e.preventDefault(); audio.currentTime = Math.min(audio.duration||0, audio.currentTime+10); }
+      if (!e.target.closest('.seeker')) { e.preventDefault(); audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); }
       break;
     case 'ArrowLeft':
-      if (!e.target.closest('.seeker')) { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime-10); }
+      if (!e.target.closest('.seeker')) { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 10); }
       break;
     case 'n': playNext(); break;
     case 'p': case 'b': playPrev(); break;
@@ -859,9 +883,10 @@ document.addEventListener('keydown', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 audio.volume = state.volume;
-volFill.style.width  = '80%';
-volThumb.style.left  = '80%';
+volFill.style.width = '80%';
+volThumb.style.left = '80%';
 player.buildShuffleOrder();
 setupShortcuts();
 setupTrayListeners();
+setupDragDrop();
 loadPlaylist();
