@@ -1,0 +1,25 @@
+name: Create Feedback Issue
+
+on:
+  repository_dispatch:
+    types: [create-feedback-issue]
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create Issue via GitHub API
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const payload = context.payload.client_payload;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: payload.title,
+              body: payload.body,
+              labels: payload.labels
+            });
