@@ -15,6 +15,17 @@
 </div>
 
 ---
+
+## 本ソフトのスクリーンショット
+<div align="center">
+  <img src="docs/1.png" width="800" alt="ホーム" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <br>
+  <img src="docs/2.png" width="800" alt="設定" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <br>
+  <img src="docs/3.png" width="800" alt="フィードバック" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+</div>
+
+---
 # Audionについて
 -   **幅広いフォーマット対応**:
     <p>
