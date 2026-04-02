@@ -521,8 +521,9 @@ body.mini-view .titlebar-controls {
   position: absolute;
   right: 0;
   top: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
   border-radius: 0 0 0 8px;
+  z-index: 1000;
 }
 
 body.mini-view .tb-btn {
@@ -535,45 +536,78 @@ body.mini-view .app {
 }
 
 body.mini-view .player {
-  padding: 10px;
+  padding: 0 20px;
   flex-direction: row;
-  gap: 15px;
+  gap: 20px;
+  align-items: center;
   justify-content: flex-start;
+  height: 100vh;
+  overflow: hidden;
 }
 
 body.mini-view .art-section {
-  width: 100px;
-  height: 100px;
+  width: 50px;
+  height: 50px;
   margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+body.mini-view .visualizer-canvas {
+  display: none;
 }
 
 body.mini-view .track-section {
   text-align: left;
-  margin-bottom: 5px;
-  max-width: 200px;
+  margin-bottom: 0;
+  width: 160px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+body.mini-view .track-title-wrap {
+  max-width: 160px;
 }
 
 body.mini-view .track-title {
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 body.mini-view .track-sub {
   font-size: 0.7rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.mini-view .progress-section {
-  margin-bottom: 10px;
-  max-width: 200px;
+  margin-bottom: 0;
+  flex: 3;
+  min-width: 200px;
+  gap: 12px;
+}
+
+body.mini-view .time-lbl {
+  font-size: 0.7rem;
+  width: auto;
+  min-width: 30px;
+  opacity: 0.7;
 }
 
 body.mini-view .controls-section {
   margin-bottom: 0;
-  gap: 10px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 body.mini-view .ctrl-icon {
   width: 30px;
   height: 30px;
+}
+
+body.mini-view .ctrl-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 body.mini-view .ctrl-md {
@@ -582,27 +616,46 @@ body.mini-view .ctrl-md {
 }
 
 body.mini-view .play-btn {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
+}
+
+body.mini-view .play-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 body.mini-view .volume-section {
   display: none;
 }
 
-body.mini-view .art-glow {
-  display: none;
+body.mini-view .speed-ctrl {
+  margin-top: 0;
+  padding: 4px 12px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  width: 110px;
 }
 
+body.mini-view .speed-slider {
+  width: 50px;
+  flex: none;
+}
+
+body.mini-view .art-glow,
 body.mini-view .art-rings {
   display: none;
 }
 
 body.mini-view .vinyl-center {
-  width: 24px;
-  height: 24px;
-  bottom: 2px;
-  right: 2px;
+  width: 14px;
+  height: 14px;
+  bottom: 0;
+  right: 0;
+}
+
+body.mini-view .tb-max {
+  display: none !important;
 }
 
 .drop-hint {

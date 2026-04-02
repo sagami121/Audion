@@ -24,51 +24,56 @@ fn read_audio_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn get_file_metadata(path: String) -> Result<serde_json::Value, String> {
-    let probed = Probe::open(&path)
-        .map_err(|e| e.to_string())?
-        .read()
-        .map_err(|e| e.to_string())?;
-
+fn get_file_metadata(path: String) -> serde_json::Value {
     let filename = std::path::Path::new(&path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_string();
 
-    let mut title = filename.clone();
+    // Strip extension for display name fallback
+    let stem = std::path::Path::new(&path)
+        .file_stem()
+        .and_then(|n| n.to_str())
+        .unwrap_or(&filename)
+        .to_string();
+
+    let mut title = stem.clone();
     let mut artist = String::new();
     let mut album = String::new();
     let mut picture_base64 = None;
+    let mut duration = 0.0;
 
-    if let Some(tag) = probed.primary_tag() {
-        if let Some(t) = tag.title().as_deref() { title = t.to_string(); }
-        if let Some(a) = tag.artist().as_deref() { artist = a.to_string(); }
-        if let Some(al) = tag.album().as_deref() { album = al.to_string(); }
-        
-        if let Some(pic) = tag.pictures().first() {
-            let data = pic.data();
-            let mime = pic.mime_type().map(|m| m.as_str()).unwrap_or("image/jpeg");
-            picture_base64 = Some(format!(
-                "data:{};base64,{}",
-                mime,
-                general_purpose::STANDARD.encode(data)
-            ));
+    // Try to read metadata with lofty; gracefully fall back on failure
+    if let Ok(probed) = Probe::open(&path).and_then(|p| p.read()) {
+        duration = probed.properties().duration().as_secs_f64();
+        let tag = probed.primary_tag().or_else(|| probed.first_tag());
+        if let Some(tag) = tag {
+            if let Some(t) = tag.title().as_deref() { title = t.to_string(); }
+            if let Some(a) = tag.artist().as_deref() { artist = a.to_string(); }
+            if let Some(al) = tag.album().as_deref() { album = al.to_string(); }
+
+            if let Some(pic) = tag.pictures().first() {
+                let data = pic.data();
+                let mime = pic.mime_type().map(|m| m.as_str()).unwrap_or("image/jpeg");
+                picture_base64 = Some(format!(
+                    "data:{};base64,{}",
+                    mime,
+                    general_purpose::STANDARD.encode(data)
+                ));
+            }
         }
-    } else if let Some(tag) = probed.first_tag() {
-        if let Some(t) = tag.title().as_deref() { title = t.to_string(); }
-        if let Some(a) = tag.artist().as_deref() { artist = a.to_string(); }
-        if let Some(al) = tag.album().as_deref() { album = al.to_string(); }
     }
 
-    Ok(serde_json::json!({
+    serde_json::json!({
         "path": path,
         "name": title,
         "artist": artist,
         "album": album,
         "cover": picture_base64,
-        "filename": filename
-    }))
+        "filename": filename,
+        "duration": duration
+    })
 }
 
 #[tauri::command]

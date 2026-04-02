@@ -71,7 +71,8 @@ export const translations = {
     toast_no_tracks: "曲を追加してください",
     tracks_count: " 曲",
     restore_session: "起動時に前回の状態を復元する",
-    save_settings: "設定を保存"
+    save_settings: "設定を保存",
+    toast_settings_saved: "設定を保存しました"
   },
   en: {
     app_title: "Audion — Music Player",
@@ -145,7 +146,8 @@ export const translations = {
     toast_no_tracks: "Please add tracks",
     tracks_count: " tracks",
     restore_session: "Restore previous state on startup",
-    save_settings: "Save Settings"
+    save_settings: "Save Settings",
+    toast_settings_saved: "Settings saved"
   },
   ko: {
     app_title: "Audion — 음악 플레이어",
@@ -208,7 +210,7 @@ export const translations = {
     repeat_one: "한 곡 반복",
     shuffle_on: "셔플 ON",
     shuffle_off: "셔플 OFF",
-    speed: "속度",
+    speed: "속도",
     sending: "전송 중...",
     submit: "보내기",
     save_playlist: "재생 목록 저장",
@@ -219,7 +221,8 @@ export const translations = {
     toast_no_tracks: "곡을 추가해 주세요",
     tracks_count: " 곡",
     restore_session: "시작 시 이전 상태 복원",
-    save_settings: "설정 저장"
+    save_settings: "설정 저장",
+    toast_settings_saved: "설정이 저장되었습니다"
   },
   zh: {
     app_title: "Audion — 音乐播放器",
@@ -293,6 +296,7 @@ export const translations = {
     toast_no_tracks: "请添加歌曲",
     tracks_count: " 首歌曲",
     restore_session: "启动时恢复上次状态",
-    save_settings: "保存设置"
+    save_settings: "保存设置",
+    toast_settings_saved: "设置已保存"
   }
 };

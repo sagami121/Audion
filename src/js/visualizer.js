@@ -113,15 +113,7 @@ function draw() {
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
     ctx.lineWidth = 4;
-    if (primaryColor.startsWith('var(')) {
-      ctx.strokeStyle = '#a78bfa';
-    } else {
-      ctx.strokeStyle = primaryColor;
-    }
-
-    const canvasColor = primaryColor.startsWith('rgb') ? primaryColor : gradient;
-    ctx.strokeStyle = canvasColor;
-
+    ctx.strokeStyle = primaryColor.startsWith('rgb') ? primaryColor : gradient;
     ctx.stroke();
   }
 }

@@ -2,8 +2,9 @@ import { state } from './state.js';
 import { fmt, showToast } from './utils.js';
 import { updateActive, updatePlayUI } from './ui.js';
 import { startVisualizer, stopVisualizer } from './visualizer.js';
+import { translations } from './translations.js';
 
-const { convertFileSrc } = window.__TAURI__.core;
+const convertFileSrc = window.__TAURI__?.core?.convertFileSrc ?? ((s) => s);
 
 export function savePlaylist() {
   const paths = state.tracks.map(t => t.path);
@@ -36,7 +37,8 @@ export function playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl) {
     startVisualizer();
   }).catch(e => {
     console.error(e);
-    showToast('再生に失敗しました');
+    const dict = translations[state.lang] || translations.ja;
+    showToast(dict.toast_error_play);
   });
 }
 
@@ -51,15 +53,3 @@ export function pauseAudio(audio, albumArt, playlistEl) {
   stopVisualizer();
 }
 
-export function preloadMeta(index, path, playlistEl) {
-  const tmp = new Audio();
-  tmp.src = convertFileSrc(path);
-  tmp.addEventListener('loadedmetadata', () => {
-    state.tracks[index].duration = tmp.duration;
-    if (playlistEl) {
-      const li = Array.from(playlistEl.children).find(el => parseInt(el.dataset.index) === index);
-      if (li) li.querySelector('.pl-dur').textContent = fmt(tmp.duration);
-    }
-    tmp.src = '';
-  });
-}

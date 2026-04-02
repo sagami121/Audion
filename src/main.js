@@ -192,7 +192,7 @@ btnSaveSettings?.addEventListener('click', () => {
   saveSettings();
   settingsModal.classList.remove('active');
   const dict = translations[state.lang] || translations.ja;
-  showToast(dict.toast_saved || "設定を保存しました");
+  showToast(dict.toast_settings_saved || "設定を保存しました");
 });
 
 btnReportBug?.addEventListener('click', () => {
@@ -435,7 +435,11 @@ async function loadPlaylist() {
   if (state.restoreSession && settings.current !== undefined && state.tracks[settings.current]) {
     loadTrack(settings.current, false);
     if (settings.currentTime) {
-      audio.currentTime = settings.currentTime;
+      const restoreTime = () => {
+        audio.currentTime = settings.currentTime;
+        audio.removeEventListener('loadedmetadata', restoreTime);
+      };
+      audio.addEventListener('loadedmetadata', restoreTime);
     }
   }
 
@@ -468,29 +472,29 @@ async function setupShortcuts() {
     const playPauseKeys = ['MediaPlayPause', 'MediaPlay', 'MediaPause'];
     for (const k of playPauseKeys) {
       try {
-        await registerShortcut(k, (e) => { if (e.state === 'Pressed') togglePlay(); });
+        await registerShortcut(k, () => { togglePlay(); });
       } catch { }
     }
 
     const nextKeys = ['MediaNextTrack', 'MediaNext'];
     for (const k of nextKeys) {
       try {
-        await registerShortcut(k, (e) => { if (e.state === 'Pressed') playNext(); });
+        await registerShortcut(k, () => { playNext(); });
       } catch { }
     }
 
     const prevKeys = ['MediaPrevTrack', 'MediaPrevious', 'MediaPrev'];
     for (const k of prevKeys) {
       try {
-        await registerShortcut(k, (e) => { if (e.state === 'Pressed') playPrev(); });
+        await registerShortcut(k, () => { playPrev(); });
       } catch { }
     }
 
     const stopKeys = ['MediaStop', 'MediaStopTrack'];
     for (const k of stopKeys) {
       try {
-        await registerShortcut(k, (e) => {
-          if (e.state === 'Pressed') resetPlayer();
+        await registerShortcut(k, () => {
+          resetPlayer();
         });
       } catch { }
     }
@@ -508,7 +512,7 @@ async function setupTrayListeners() {
 
 btnSavePlaylist?.addEventListener('click', async () => {
   const dict = translations[state.lang] || translations.ja;
-  if (!state.tracks.length) { showToast(dict.toast_error_play); return; }
+  if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
   try {
     const filePath = await window.__TAURI__.dialog.save({
       title: dict.save_playlist,
@@ -588,9 +592,10 @@ btnOpenFolder?.addEventListener('click', async () => {
     });
     if (!folder) return;
     const entries = await window.__TAURI__.fs.readDir(folder);
+    const normalizedFolder = folder.endsWith('/') || folder.endsWith('\\') ? folder : `${folder}/`;
     const paths = entries
       .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name))
-      .map(e => `${folder}/${e.name}`);
+      .map(e => `${normalizedFolder}${e.name}`);
     if (paths.length) await addPaths(paths);
     else showToast(dict.toast_error_none);
   } catch (e) {
@@ -635,15 +640,21 @@ async function addPaths(paths, isInitial = false) {
         artist: meta.artist,
         album: meta.album,
         cover: meta.cover,
-        duration: 0,
+        duration: meta.duration || 0,
         addedAt: Date.now()
       });
 
       const idx = state.tracks.length - 1;
-      const row = ui.createPlaylistRow(idx, state.tracks[idx], onPlaylistRowClick);
-      playlist.appendChild(row);
+      const filter = plSearch.value.toLowerCase();
+      const track = state.tracks[idx];
+      const matchesFilter = !filter || 
+        track.name.toLowerCase().includes(filter) || 
+        (track.artist && track.artist.toLowerCase().includes(filter));
 
-      player.preloadMeta(idx, path, playlist);
+      if (matchesFilter) {
+        const row = ui.createPlaylistRow(idx, track, onPlaylistRowClick);
+        playlist.appendChild(row);
+      }
       added++;
     } catch (e) {
       console.warn('Failed to add', path, e);
@@ -672,14 +683,31 @@ async function toggleMiniMode() {
   state.miniPlayer = !state.miniPlayer;
   document.body.classList.toggle('mini-view', state.miniPlayer);
 
+  const tbMax = document.getElementById('tbMax');
+  const { LogicalSize } = window.__TAURI__.window;
+
   if (state.miniPlayer) {
     normalSize = await appWindow.innerSize();
-    await appWindow.setSize(new window.__TAURI__.window.LogicalSize(360, 180));
+    const miniSize = new LogicalSize(860, 80);
+    
+    await appWindow.setResizable(false);
+    await appWindow.setMinSize(miniSize);
+    await appWindow.setMaxSize(miniSize);
+    await appWindow.setSize(miniSize);
     await appWindow.setAlwaysOnTop(true);
+    
+    if (tbMax) tbMax.style.display = 'none';
     btnMiniMode.classList.add('active');
   } else {
+    await appWindow.setResizable(true);
+    await appWindow.setMinSize(new LogicalSize(400, 300)); // 最小サイズをリセット
+    await appWindow.setMaxSize(null); // 最大制限を解除
+    
+    // PhysicalSize をそのまま渡すか、Logicalに変換して適用
     await appWindow.setSize(normalSize);
     await appWindow.setAlwaysOnTop(state.alwaysOnTop);
+    
+    if (tbMax) tbMax.style.display = 'flex';
     btnMiniMode.classList.remove('active');
   }
 }
@@ -938,7 +966,7 @@ async function setupDragDrop() {
       dropOverlay.classList.remove('active');
       const { paths } = event.payload;
       if (paths && paths.length) {
-        const musicPaths = paths.filter(p => /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma)$/i.test(p));
+        const musicPaths = paths.filter(p => /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(p));
         if (musicPaths.length) await addPaths(musicPaths);
         else showToast(translations[state.lang].toast_error_generic);
       }

@@ -69,6 +69,7 @@ export function updateTrackUI(track) {
     const wrap = trackTitle.parentElement;
     if (trackTitle.scrollWidth > wrap.clientWidth + 2) trackTitle.classList.add('marquee');
 
+    trackTitle.querySelectorAll('.pl-badge').forEach(b => b.remove());
     const ext = track.path.split('.').pop().toUpperCase();
     if (ext && ext.length < 5) {
       const badge = document.createElement('span');

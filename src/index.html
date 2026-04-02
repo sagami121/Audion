@@ -7,25 +7,25 @@
   <title>Audion</title>
 
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    (function () {
+      try {
+        const settings = JSON.parse(localStorage.getItem('af_settings') || '{}');
+        const theme = settings.theme || 'dark';
+        document.documentElement.classList.add(theme + '-theme');
+
+        const savedW = localStorage.getItem('af_sidebar_w');
+        if (savedW) {
+          document.documentElement.style.setProperty('--sidebar-w', savedW);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+          document.body.classList.add(theme + '-theme');
+        });
+      } catch (e) { }
+    })();
+  </script>
 </head>
-<script>
-  (function () {
-    try {
-      const settings = JSON.parse(localStorage.getItem('af_settings') || '{}');
-      const theme = settings.theme || 'dark';
-      document.documentElement.classList.add(theme + '-theme');
-
-      const savedW = localStorage.getItem('af_sidebar_w');
-      if (savedW) {
-        document.documentElement.style.setProperty('--sidebar-w', savedW);
-      }
-
-      window.addEventListener('DOMContentLoaded', () => {
-        document.body.classList.add(theme + '-theme');
-      });
-    } catch (e) { }
-  })();
-</script>
 
 <body>
 

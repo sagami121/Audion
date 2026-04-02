@@ -1,6 +1,12 @@
 export function fmt(s) {
   if (!s || isNaN(s)) return '0:00';
-  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const hrs = Math.floor(s / 3600);
+  const min = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  if (hrs > 0) {
+    return `${hrs}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+  return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
 export function esc(s) {
