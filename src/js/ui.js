@@ -3,6 +3,8 @@
  */
 import { state } from './state.js';
 import { fmt, esc } from './utils.js';
+import { getDominantColor, lightenColor } from './color.js';
+import { setVisualizerColors } from './visualizer.js';
 
 /**
  * Update the active track highlighting in the playlist
@@ -52,9 +54,28 @@ export function updateTrackUI(track) {
     artImg.src = track.cover;
     artImg.style.display = 'block';
     artDefault.style.display = 'none';
+    
+    // Extract color when image loads
+    artImg.onload = async () => {
+      const color = await getDominantColor(artImg);
+      if (color) {
+        const root = document.documentElement;
+        const mainRgb = `rgb(${color.r}, ${color.g}, ${color.b})`;
+        const light = lightenColor(color, 1.4);
+        const lightRgb = `rgb(${light.r}, ${light.g}, ${light.b})`;
+        const glow = `rgba(${color.r}, ${color.g}, ${color.b}, 0.6)`;
+        
+        root.style.setProperty('--accent-color', mainRgb);
+        root.style.setProperty('--glow-color', glow);
+        setVisualizerColors(mainRgb, lightRgb);
+      } else {
+        resetThemeColors();
+      }
+    };
   } else {
     artImg.style.display = 'none';
     artDefault.style.display = 'flex';
+    resetThemeColors();
   }
 
   setTimeout(() => {
@@ -122,4 +143,12 @@ export function renderPlaylist(playlistEl, tracks, onRowClick, filter = '') {
     playlistEl.appendChild(row);
   });
   updateActive(playlistEl);
+}
+
+function resetThemeColors() {
+  const root = document.documentElement;
+  // Default fallback theme colors
+  root.style.removeProperty('--accent-color');
+  root.style.removeProperty('--glow-color');
+  setVisualizerColors('#a78bfa', '#38bdf8');
 }

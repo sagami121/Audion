@@ -21,6 +21,10 @@
   --border-h: #444;
   --sb: rgba(255,255,255,0.1);
   --sb-h: rgba(255,255,255,0.2);
+
+  /* Dynamic Theming */
+  --accent-color: #a78bfa;
+  --glow-color: #38bdf8;
 }
 
 body.dark-theme {
@@ -536,7 +540,7 @@ body.mini-view .vinyl-center { width: 24px; height: 24px; bottom: 2px; right: 2p
 .pl-bar {
   width: 3px;
   border-radius: 1px;
-  background: var(--text);
+  background: var(--accent-color, var(--text));
   animation: barAnim 0.7s ease-in-out infinite;
   transition: background-color var(--transition);
 }
@@ -549,7 +553,7 @@ body.mini-view .vinyl-center { width: 24px; height: 24px; bottom: 2px; right: 2p
 .pl-item.active .pl-bars .pl-bar { animation-play-state: paused; }
 
 .pl-item.active .pl-name {
-  color: var(--text);
+  color: var(--accent-color, var(--text));
 }
 
 .pl-dur {
@@ -596,13 +600,23 @@ body.mini-view .vinyl-center { width: 24px; height: 24px; bottom: 2px; right: 2p
   margin-bottom: 36px;
   flex-shrink: 0;
 }
+.visualizer-canvas {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1; /* Behind album art */
+  pointer-events: none;
+}
 .art-glow {
   position: absolute;
   inset: -20px;
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
-  display: none;
+  display: block;
+  background: radial-gradient(circle, var(--accent-color, #a78bfa) 0%, transparent 70%);
+  filter: blur(20px);
+  transition: opacity 0.5s ease;
 }
 
 .art-ring {
@@ -719,7 +733,7 @@ body.mini-view .vinyl-center { width: 24px; height: 24px; bottom: 2px; right: 2p
   transition: width 0.3s ease, background-color var(--transition);
 }
 .seeker-fill {
-  background: var(--text);
+  background: var(--accent-color, var(--text));
   width: 0;
   transition: width 0.1s linear, background-color var(--transition);
 }
@@ -759,9 +773,9 @@ body.mini-view .vinyl-center { width: 24px; height: 24px; bottom: 2px; right: 2p
 .ctrl-icon:hover { background: var(--border-h); color: var(--text); }
 
 .ctrl-icon.active {
-  color: var(--text);
-  border-color: var(--border-h);
-  background: var(--border-h);
+  color: var(--bg);
+  border-color: var(--accent-color, var(--text));
+  background: var(--accent-color, var(--text));
 }
 .ctrl-md { width: 46px; height: 46px; }
 

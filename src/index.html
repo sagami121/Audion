@@ -146,6 +146,7 @@
 
       <!-- Album Art area -->
       <div class="art-section">
+        <canvas id="visualizerCanvas" class="visualizer-canvas"></canvas>
         <div class="art-glow" id="artGlow"></div>
         <div class="art-rings">
           <div class="art-ring r1"></div>
@@ -158,11 +159,11 @@
               <circle cx="28" cy="28" r="5" fill="url(#dg)"/>
               <path d="M21 12v7l7-3.5-7-3.5z" fill="url(#dg)"/>
               <defs><linearGradient id="dg" x1="10" y1="10" x2="46" y2="46">
-                <stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#38bdf8"/>
+                <stop offset="0%" stop-color="var(--accent-color, #a78bfa)"/><stop offset="100%" stop-color="var(--glow-color, #38bdf8)"/>
               </linearGradient></defs>
             </svg>
           </div>
-          <img id="artImg" alt="Album Art" style="display:none"/>
+          <img id="artImg" alt="Album Art" style="display:none" crossorigin="anonymous"/>
         </div>
         <div class="vinyl-center" id="vinylCenter"></div>
       </div>
@@ -274,6 +275,13 @@
           </label>
         </div>
 
+        <div class="setting-item">
+          <label class="setting-lbl">
+            <span data-i18n="restore_session">起動時に前回の状態を復元する</span>
+            <input type="checkbox" id="checkRestoreSession">
+          </label>
+        </div>
+
         <div class="setting-divider"></div>
 
         <!-- Theme Toggle -->
@@ -302,6 +310,7 @@
 
         <div class="setting-divider"></div>
 
+        <button class="btn-primary" id="btnSaveSettings" style="width: 100%; margin-bottom: 15px;" data-i18n="save_settings">設定を保存</button>
         <div class="setting-item">
           <button class="btn-secondary" id="btnReportBug">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 6px;">
@@ -310,7 +319,6 @@
             <span data-i18n="report_bug">不具合を報告する</span>
           </button>
         </div>
-        <p class="setting-hint" data-i18n="auto_save_hint">※設定は自動的に保存されます</p>
         <p class="version-text" style="font-size: 10px; opacity: 0.5; margin-top: 10px; text-align: center;">Ver <span id="appVersion">0.0.0</span></p>
       </div>
     </div>
@@ -352,7 +360,8 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <audio id="audio"></audio>
+  <audio id="audio" crossorigin="anonymous"></audio>
+  <canvas id="colorCanvas" style="display:none;"></canvas>
   <script type="module" src="main.js"></script>
 </body>
 </html>

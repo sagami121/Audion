@@ -68,7 +68,10 @@ export const translations = {
     select_music: "音楽ファイルを選択",
     music: "音楽",
     select_folder: "フォルダを選択",
-    toast_no_tracks: "曲を追加してください"
+    toast_no_tracks: "曲を追加してください",
+    tracks_count: " 曲",
+    restore_session: "起動時に前回の状態を復元する",
+    save_settings: "設定を保存"
   },
   en: {
     app_title: "Audion — Music Player",
@@ -139,7 +142,10 @@ export const translations = {
     select_music: "Select Music Files",
     music: "Music",
     select_folder: "Select Folder",
-    toast_no_tracks: "Please add tracks"
+    toast_no_tracks: "Please add tracks",
+    tracks_count: " tracks",
+    restore_session: "Restore previous state on startup",
+    save_settings: "Save Settings"
   },
   ko: {
     app_title: "Audion — 음악 플레이어",
@@ -210,7 +216,10 @@ export const translations = {
     select_music: "음악 파일 선택",
     music: "음악",
     select_folder: "폴더 선택",
-    toast_no_tracks: "곡을 추가해 주세요"
+    toast_no_tracks: "곡을 추가해 주세요",
+    tracks_count: " 곡",
+    restore_session: "시작 시 이전 상태 복원",
+    save_settings: "설정 저장"
   },
   zh: {
     app_title: "Audion — 音乐播放器",
@@ -281,6 +290,9 @@ export const translations = {
     select_music: "选择音乐文件",
     music: "音乐",
     select_folder: "选择文件夹",
-    toast_no_tracks: "请添加歌曲"
+    toast_no_tracks: "请添加歌曲",
+    tracks_count: " 首歌曲",
+    restore_session: "启动时恢复上次状态",
+    save_settings: "保存设置"
   }
 };

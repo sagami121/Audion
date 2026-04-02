@@ -8,6 +8,7 @@ import * as player from './js/player.js';
 import * as ui from './js/ui.js';
 import { translations } from './js/translations.js';
 import { CONFIG } from './js/config.js';
+import { initVisualizer, stopVisualizer } from './js/visualizer.js';
 
 const isTauri = !!window.__TAURI__;
 if (!isTauri) {
@@ -114,7 +115,9 @@ const tbClose = document.getElementById('tbClose');
 const btnSettings = document.getElementById('btnSettings');
 const settingsModal = document.getElementById('settingsModal');
 const btnCloseSettings = document.getElementById('btnCloseSettings');
+const btnSaveSettings = document.getElementById('btnSaveSettings');
 const checkOnTop = document.getElementById('checkOnTop');
+const checkRestoreSession = document.getElementById('checkRestoreSession');
 const btnReportBug = document.getElementById('btnReportBug');
 const bugModal = document.getElementById('bugModal');
 const btnCloseBug = document.getElementById('btnCloseBug');
@@ -161,9 +164,49 @@ document.addEventListener('mouseup', () => {
 });
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-btnSettings?.addEventListener('click', () => settingsModal.classList.add('active'));
+btnSettings?.addEventListener('click', () => {
+  if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
+  if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
+  if (langSelect) langSelect.value = state.lang;
+  btnThemeDark?.classList.toggle('active', state.theme === 'dark');
+  btnThemeLight?.classList.toggle('active', state.theme === 'light');
+  settingsModal.classList.add('active');
+});
 btnCloseSettings?.addEventListener('click', () => settingsModal.classList.remove('active'));
 settingsModal?.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('active'); });
+
+btnSaveSettings?.addEventListener('click', () => {
+  let needsLanguageUpdate = false;
+  let needsThemeUpdate = false;
+
+  if (checkOnTop && checkOnTop.checked !== state.alwaysOnTop) {
+    state.alwaysOnTop = checkOnTop.checked;
+    appWindow.setAlwaysOnTop(state.alwaysOnTop);
+    localStorage.setItem('af_on_top', state.alwaysOnTop);
+  }
+  
+  if (checkRestoreSession && checkRestoreSession.checked !== state.restoreSession) {
+    state.restoreSession = checkRestoreSession.checked;
+    localStorage.setItem('af_restore_session', state.restoreSession);
+  }
+
+  const selectedTheme = btnThemeDark?.classList.contains('active') ? 'dark' : 'light';
+  if (selectedTheme !== state.theme) {
+    needsThemeUpdate = true;
+  }
+
+  if (langSelect && langSelect.value !== state.lang) {
+    needsLanguageUpdate = true;
+  }
+
+  if (needsThemeUpdate) setTheme(selectedTheme);
+  if (needsLanguageUpdate) updateLanguage(langSelect.value);
+
+  saveSettings();
+  settingsModal.classList.remove('active');
+  const dict = translations[state.lang] || translations.ja;
+  showToast(dict.toast_saved || "設定を保存しました"); 
+});
 
 btnReportBug?.addEventListener('click', () => {
   settingsModal.classList.remove('active');
@@ -263,16 +306,36 @@ bugDesc?.addEventListener('input', () => {
   if (bugTitle.value.trim() && bugDesc.value.trim()) clearBugError();
 });
 
-checkOnTop?.addEventListener('change', (e) => {
-  state.alwaysOnTop = e.target.checked;
-  appWindow.setAlwaysOnTop(state.alwaysOnTop);
-  localStorage.setItem('af_on_top', state.alwaysOnTop);
-});
+// Removed auto-save event listeners for checkOnTop and checkRestoreSession
 
 // --- Theme & Language ---
-btnThemeDark?.addEventListener('click', () => setTheme('dark'));
-btnThemeLight?.addEventListener('click', () => setTheme('light'));
-langSelect?.addEventListener('change', (e) => updateLanguage(e.target.value));
+btnThemeDark?.addEventListener('click', () => {
+  btnThemeDark.classList.add('active');
+  btnThemeLight.classList.remove('active');
+});
+btnThemeLight?.addEventListener('click', () => {
+  btnThemeLight.classList.add('active');
+  btnThemeDark.classList.remove('active');
+});
+
+// Select input wheel handler remains, but langSelect change listener is removed
+
+document.querySelectorAll('select.select-input').forEach(sel => {
+  sel.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const len = sel.options.length;
+    if (!len) return;
+    
+    let idx = sel.selectedIndex;
+    if (e.deltaY < 0) idx = Math.max(0, idx - 1);
+    else idx = Math.min(len - 1, idx + 1);
+    
+    if (idx !== sel.selectedIndex) {
+      sel.selectedIndex = idx;
+      sel.dispatchEvent(new Event('change'));
+    }
+  }, { passive: false });
+});
 
 function setTheme(theme) {
   state.theme = theme;
@@ -322,6 +385,16 @@ speedSlider?.addEventListener('input', (e) => {
   setSpeed(val);
 });
 
+speedSlider?.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  let val = state.speed;
+  const step = 0.1;
+  if (e.deltaY < 0) val = Math.min(2.0, val + step);
+  else val = Math.max(0.5, val - step);
+  val = Math.round(val * 10) / 10;
+  setSpeed(val);
+}, { passive: false });
+
 function setSpeed(val) {
   state.speed = val;
   audio.playbackRate = val;
@@ -347,12 +420,17 @@ function saveSettings() {
 }
 
 async function loadPlaylist() {
-  const stored = localStorage.getItem('af_playlist');
-  if (stored) {
-    try {
-      const paths = JSON.parse(stored);
-      if (paths.length) await addPaths(paths, true);
-    } catch (e) { console.error('Load failed', e); }
+  state.restoreSession = localStorage.getItem('af_restore_session') !== 'false';
+  if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
+
+  if (state.restoreSession) {
+    const stored = localStorage.getItem('af_playlist');
+    if (stored) {
+      try {
+        const paths = JSON.parse(stored);
+        if (paths.length) await addPaths(paths, true);
+      } catch (e) { console.error('Load failed', e); }
+    }
   }
 
   // Restore Settings
@@ -375,7 +453,8 @@ async function loadPlaylist() {
     repeatBtn.classList.toggle('active', state.repeat !== 'none');
     repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
   }
-  if (settings.current !== undefined && state.tracks[settings.current]) {
+
+  if (state.restoreSession && settings.current !== undefined && state.tracks[settings.current]) {
     loadTrack(settings.current, false);
     if (settings.currentTime) {
       audio.currentTime = settings.currentTime;
@@ -485,9 +564,10 @@ btnSavePlaylist?.addEventListener('click', async () => {
 });
 
 btnLoadPlaylist?.addEventListener('click', async () => {
+  const dict = translations[state.lang] || translations.ja;
   try {
     const file = await dialogOpen({
-      title: 'プレイリストを読み込む',
+      title: dict.load_playlist,
       multiple: false,
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
     });
@@ -501,37 +581,39 @@ btnLoadPlaylist?.addEventListener('click', async () => {
       const paths = tracks.map(t => t.path).filter(p => !!p);
       if (paths.length) {
         await addPaths(paths);
-        showToast(`${paths.length} 曲を読み込みました`);
+        showToast(`${paths.length}${dict.toast_loaded}`);
       }
     } else {
       throw new Error('Invalid format');
     }
   } catch (e) {
     console.error('Load failed', e);
-    showToast('読み込みに失敗しました');
+    showToast(dict.toast_error_generic);
   }
 });
 
 btnOpenFiles.addEventListener('click', async () => {
+  const dict = translations[state.lang] || translations.ja;
   try {
     const files = await dialogOpen({
-      title: '音楽ファイルを選択',
+      title: dict.select_music,
       multiple: true,
-      filters: [{ name: '音楽', extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'aiff', 'wma'] }],
+      filters: [{ name: dict.music, extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'aiff', 'wma'] }],
     });
     if (!files) return;
     const paths = Array.isArray(files) ? files : [files];
     await addPaths(paths);
   } catch (e) {
     console.error(e);
-    showToast('ファイルを開けませんでした');
+    showToast(dict.toast_error_open);
   }
 });
 
 btnOpenFolder?.addEventListener('click', async () => {
+  const dict = translations[state.lang] || translations.ja;
   try {
     const folder = await dialogOpen({
-      title: 'フォルダを選択',
+      title: dict.select_folder,
       directory: true,
       multiple: false,
     });
@@ -541,22 +623,23 @@ btnOpenFolder?.addEventListener('click', async () => {
       .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name))
       .map(e => `${folder}/${e.name}`);
     if (paths.length) await addPaths(paths);
-    else showToast('音楽ファイルが見つかりませんでした');
+    else showToast(dict.toast_error_none);
   } catch (e) {
     console.error(e);
-    showToast('フォルダを開けませんでした');
+    showToast(dict.toast_error_folder);
   }
 });
 
 btnClearAll.addEventListener('click', () => {
   if (!state.tracks.length) return;
+  const dict = translations[state.lang] || translations.ja;
   resetPlayer();
   state.tracks = [];
   playlist.innerHTML = '';
   updateCount();
   dropHint.classList.remove('hidden');
   player.savePlaylist();
-  showToast('プレイリストをクリアしました');
+  showToast(dict.toast_cleared);
 });
 
 async function addPaths(paths, isInitial = false) {
@@ -659,7 +742,8 @@ function removeTrack(index) {
 }
 
 function updateCount() {
-  plCount.textContent = `${state.tracks.length} 曲`;
+  const dict = translations[state.lang] || translations.ja;
+  plCount.textContent = `${state.tracks.length}${dict.tracks_count || ' 曲'}`;
 }
 
 plSearch?.addEventListener('input', (e) => {
@@ -685,7 +769,8 @@ function loadTrack(index, autoplay = false) {
 
 // ─── Playback ─────────────────────────────────────────────────────────────────
 function togglePlay() {
-  if (!state.tracks.length) { showToast('曲を追加してください'); return; }
+  const dict = translations[state.lang] || translations.ja;
+  if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
   if (state.current === -1) { loadTrack(0, true); return; }
   state.playing ? player.pauseAudio(audio, albumArt, playlist) : player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
 }
@@ -724,10 +809,11 @@ function resetPlayer() {
   audio.removeAttribute('src'); // srcを削除
   audio.load(); // 読み込みを中断
 
-  trackTitle.textContent = '曲を選択してください';
+  const dict = translations[state.lang] || translations.ja;
+  trackTitle.textContent = dict.select_track;
   trackTitle.classList.remove('marquee');
   const trackSub = document.getElementById('trackSub');
-  if (trackSub) trackSub.textContent = 'Audion へようこそ';
+  if (trackSub) trackSub.textContent = dict.welcome;
   curTime.textContent = '0:00'; durTime.textContent = '0:00';
   seekFill.style.width = '0'; seekThumb.style.left = '0';
   ui.updatePlayUI(false);
@@ -742,6 +828,8 @@ function resetPlayer() {
   if (artImg) artImg.style.display = 'none';
   if (artDefault) artDefault.style.display = 'flex';
   appWindow.setProgressBar({ progress: 0 });
+  
+  stopVisualizer();
 }
 
 // ─── Audio Events ─────────────────────────────────────────────────────────────
@@ -773,8 +861,9 @@ audio.addEventListener('ended', () => {
 });
 
 audio.addEventListener('error', () => {
+  const dict = translations[state.lang] || translations.ja;
   if (state.current !== -1 && audio.src) {
-    showToast('再生エラーが発生しました');
+    showToast(dict.toast_error_play);
   }
 });
 
@@ -788,7 +877,8 @@ shuffleBtn.addEventListener('click', () => {
   shuffleBtn.classList.toggle('active', state.shuffle);
   player.buildShuffleOrder();
   saveSettings();
-  showToast(state.shuffle ? 'シャッフル ON' : 'シャッフル OFF');
+  const dict = translations[state.lang] || translations.ja;
+  showToast(state.shuffle ? dict.shuffle_on : dict.shuffle_off);
 });
 
 repeatBtn.addEventListener('click', () => {
@@ -796,7 +886,8 @@ repeatBtn.addEventListener('click', () => {
   state.repeat = next[state.repeat];
   repeatBtn.classList.toggle('active', state.repeat !== 'none');
   repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
-  const labels = { none: 'リピートなし', all: '全曲リピート', one: '1曲リピート' };
+  const dict = translations[state.lang] || translations.ja;
+  const labels = { none: dict.repeat_none, all: dict.repeat_all, one: dict.repeat_one };
   saveSettings();
   showToast(labels[state.repeat]);
 });
@@ -850,6 +941,20 @@ function setVol(e) {
 volBar.addEventListener('mousedown', e => { state.volDrag = true; setVol(e); });
 document.addEventListener('mousemove', e => { if (state.volDrag) setVol(e); });
 document.addEventListener('mouseup', () => { state.volDrag = false; });
+
+volBar.addEventListener('wheel', e => {
+  e.preventDefault();
+  let v = state.volume;
+  if (e.deltaY < 0) v = Math.min(1, v + 0.05);
+  else v = Math.max(0, v - 0.05);
+  v = Math.round(v * 100) / 100;
+  
+  state.volume = v;
+  state.muted = v === 0;
+  audio.volume = v;
+  updateVolBarUI();
+  saveSettings();
+}, { passive: false });
 
 function updateVolIcon() {
   const v = state.muted ? 0 : state.volume;
@@ -980,6 +1085,7 @@ document.addEventListener('keydown', e => {
       setupDragDrop(); // Browser fallback
     }
     
+    initVisualizer(audio);
     await loadPlaylist();
   } catch (e) {
     console.error("Init Error:", e);
