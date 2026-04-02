@@ -65,7 +65,5 @@ npm run tauri build
 
 ---
 
-## ライセンス (License)
-
-Copyright © 2026 [sagami121](https://github.com/sagami121).
-This project is licensed under the MIT License.
+## ライセンス
+本ソフトウェアは [MIT License](LICENSE)で公開されています。
