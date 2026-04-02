@@ -1,6 +1,3 @@
-/**
- * Player and Playlist Logic
- */
 import { state } from './state.js';
 import { fmt, showToast } from './utils.js';
 import { updateActive, updatePlayUI } from './ui.js';
@@ -8,13 +5,11 @@ import { startVisualizer, stopVisualizer } from './visualizer.js';
 
 const { convertFileSrc } = window.__TAURI__.core;
 
-// ─── Persistence ──────────────────────────────────────────────────────────────
 export function savePlaylist() {
   const paths = state.tracks.map(t => t.path);
   localStorage.setItem('af_playlist', JSON.stringify(paths));
 }
 
-// ─── Shuffle order ────────────────────────────────────────────────────────────
 export function buildShuffleOrder() {
   const arr = state.tracks.map((_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) {
@@ -26,7 +21,6 @@ export function buildShuffleOrder() {
   state.shuffleOrder = arr;
 }
 
-// ─── Audio Controls ───────────────────────────────────────────────────────────
 export function playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl) {
   audio.volume = state.muted ? 0 : state.volume;
   audio.play().then(() => {
@@ -57,14 +51,12 @@ export function pauseAudio(audio, albumArt, playlistEl) {
   stopVisualizer();
 }
 
-// ─── Track Metadata ───────────────────────────────────────────────────────────
 export function preloadMeta(index, path, playlistEl) {
   const tmp = new Audio();
   tmp.src = convertFileSrc(path);
   tmp.addEventListener('loadedmetadata', () => {
     state.tracks[index].duration = tmp.duration;
     if (playlistEl) {
-      // Find the specific LI because indices might have changed due to filtering
       const li = Array.from(playlistEl.children).find(el => parseInt(el.dataset.index) === index);
       if (li) li.querySelector('.pl-dur').textContent = fmt(tmp.duration);
     }

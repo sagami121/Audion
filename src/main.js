@@ -1,7 +1,3 @@
-/**
- * Audion — Tauri Desktop Music Player
- * Main Entry: Events and DOM Glue
- */
 import { state } from './js/state.js';
 import { fmt, esc, showToast } from './js/utils.js';
 import * as player from './js/player.js';
@@ -18,11 +14,11 @@ if (!isTauri) {
   });
 }
 
-const tauriCore    = isTauri ? window.__TAURI__.core : null;
-const tauriDialog  = isTauri ? window.__TAURI__.dialog : null;
-const tauriWindow  = isTauri ? window.__TAURI__.window : null;
-const tauriShortcut= isTauri ? window.__TAURI__.globalShortcut : null;
-const tauriEvent   = isTauri ? window.__TAURI__.event : null;
+const tauriCore = isTauri ? window.__TAURI__.core : null;
+const tauriDialog = isTauri ? window.__TAURI__.dialog : null;
+const tauriWindow = isTauri ? window.__TAURI__.window : null;
+const tauriShortcut = isTauri ? window.__TAURI__.globalShortcut : null;
+const tauriEvent = isTauri ? window.__TAURI__.event : null;
 
 const invoke = tauriCore?.invoke;
 const tauriApp = isTauri ? window.__TAURI__.app : null;
@@ -33,7 +29,6 @@ const registerShortcut = tauriShortcut?.register;
 const unregisterAll = tauriShortcut?.unregisterAll;
 const listen = tauriEvent?.listen;
 
-// Global flag to ensure we only show once
 let windowShown = false;
 const showApp = async () => {
   if (windowShown || !isTauri) return;
@@ -46,27 +41,23 @@ const showApp = async () => {
   }
 };
 
-// Fallback: show window after a short timeout no matter what
 if (isTauri) setTimeout(showApp, 1000);
 
 const appWindow = isTauri ? tauriGetCurrent() : {
-  minimize: () => {},
-  maximize: () => {},
-  unmaximize: () => {},
-  close: () => {},
+  minimize: () => { },
+  maximize: () => { },
+  unmaximize: () => { },
+  close: () => { },
   isMaximized: () => Promise.resolve(false),
-  setAlwaysOnTop: () => {},
-  setProgressBar: () => {},
+  setAlwaysOnTop: () => { },
+  setProgressBar: () => { },
   show: () => Promise.resolve(),
 };
 
-// Show as soon as possible
 if (isTauri) showApp();
 
-// ─── Cache ────────────────────────────────────────────────────────────────────
 const metaCache = new Map();
 
-// ─── DOM ──────────────────────────────────────────────────────────────────────
 const audio = document.getElementById('audio');
 const playBtn = document.getElementById('playBtn');
 const prevBtn = document.getElementById('prevBtn');
@@ -99,19 +90,18 @@ const btnLoadPlaylist = document.getElementById('btnLoadPlaylist');
 const btnMiniMode = document.getElementById('btnMiniMode');
 const dropHint = document.getElementById('dropHint');
 const dropOverlay = document.getElementById('dropOverlay');
-const plSearch    = document.getElementById('plSearch');
+const plSearch = document.getElementById('plSearch');
 const sidebarResizer = document.getElementById('sidebarResizer');
-const speedSlider  = document.getElementById('speedSlider');
-const speedLbl     = document.getElementById('speedLbl');
-const langSelect   = document.getElementById('langSelect');
+const speedSlider = document.getElementById('speedSlider');
+const speedLbl = document.getElementById('speedLbl');
+const langSelect = document.getElementById('langSelect');
 const btnThemeDark = document.getElementById('btnThemeDark');
-const btnThemeLight= document.getElementById('btnThemeLight');
+const btnThemeLight = document.getElementById('btnThemeLight');
 
-// Titlebar
 const tbMin = document.getElementById('tbMin');
 const tbMax = document.getElementById('tbMax');
 const tbClose = document.getElementById('tbClose');
-// Settings
+
 const btnSettings = document.getElementById('btnSettings');
 const settingsModal = document.getElementById('settingsModal');
 const btnCloseSettings = document.getElementById('btnCloseSettings');
@@ -127,7 +117,6 @@ const bugCategory = document.getElementById('bugCategory');
 const bugDesc = document.getElementById('bugDesc');
 const bugError = document.getElementById('bugError');
 
-// ─── Titlebar Controls ────────────────────────────────────────────────────────
 tbMin.addEventListener('click', () => appWindow.minimize());
 tbMax.addEventListener('click', async () => {
   const maximized = await appWindow.isMaximized();
@@ -136,7 +125,6 @@ tbMax.addEventListener('click', async () => {
 });
 tbClose.addEventListener('click', () => appWindow.close());
 
-// ─── Sidebar Resizing ────────────────────────────────────────────────────────
 let isResizing = false;
 
 sidebarResizer?.addEventListener('mousedown', (e) => {
@@ -163,7 +151,6 @@ document.addEventListener('mouseup', () => {
   }
 });
 
-// ─── Settings ─────────────────────────────────────────────────────────────────
 btnSettings?.addEventListener('click', () => {
   if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
   if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
@@ -184,7 +171,7 @@ btnSaveSettings?.addEventListener('click', () => {
     appWindow.setAlwaysOnTop(state.alwaysOnTop);
     localStorage.setItem('af_on_top', state.alwaysOnTop);
   }
-  
+
   if (checkRestoreSession && checkRestoreSession.checked !== state.restoreSession) {
     state.restoreSession = checkRestoreSession.checked;
     localStorage.setItem('af_restore_session', state.restoreSession);
@@ -205,7 +192,7 @@ btnSaveSettings?.addEventListener('click', () => {
   saveSettings();
   settingsModal.classList.remove('active');
   const dict = translations[state.lang] || translations.ja;
-  showToast(dict.toast_saved || "設定を保存しました"); 
+  showToast(dict.toast_saved || "設定を保存しました");
 });
 
 btnReportBug?.addEventListener('click', () => {
@@ -226,7 +213,7 @@ bugModal?.addEventListener('click', (e) => {
 });
 
 async function getSystemInfo() {
-  return ""; // システム情報は不要
+  return "";
 }
 
 btnSubmitBug?.addEventListener('click', async () => {
@@ -306,9 +293,6 @@ bugDesc?.addEventListener('input', () => {
   if (bugTitle.value.trim() && bugDesc.value.trim()) clearBugError();
 });
 
-// Removed auto-save event listeners for checkOnTop and checkRestoreSession
-
-// --- Theme & Language ---
 btnThemeDark?.addEventListener('click', () => {
   btnThemeDark.classList.add('active');
   btnThemeLight.classList.remove('active');
@@ -318,18 +302,16 @@ btnThemeLight?.addEventListener('click', () => {
   btnThemeDark.classList.remove('active');
 });
 
-// Select input wheel handler remains, but langSelect change listener is removed
-
 document.querySelectorAll('select.select-input').forEach(sel => {
   sel.addEventListener('wheel', (e) => {
     e.preventDefault();
     const len = sel.options.length;
     if (!len) return;
-    
+
     let idx = sel.selectedIndex;
     if (e.deltaY < 0) idx = Math.max(0, idx - 1);
     else idx = Math.min(len - 1, idx + 1);
-    
+
     if (idx !== sel.selectedIndex) {
       sel.selectedIndex = idx;
       sel.dispatchEvent(new Event('change'));
@@ -341,27 +323,27 @@ function setTheme(theme) {
   state.theme = theme;
   document.body.classList.remove('dark-theme', 'light-theme');
   document.body.classList.add(`${theme}-theme`);
-  
+
   btnThemeDark?.classList.toggle('active', theme === 'dark');
   btnThemeLight?.classList.toggle('active', theme === 'light');
-  
+
   saveSettings();
 }
 
 function updateLanguage(lang) {
   state.lang = lang;
   const dict = translations[lang] || translations.ja;
-  
+
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (dict[key]) el.innerHTML = dict[key];
   });
-  
+
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key]) el.placeholder = dict[key];
   });
-  
+
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     const key = el.getAttribute('data-i18n-title');
     if (dict[key]) el.title = dict[key];
@@ -374,12 +356,10 @@ function updateLanguage(lang) {
 
   if (langSelect) langSelect.value = lang;
   saveSettings();
-  
-  // Update playlist count with new language
+
   updateCount();
 }
 
-// --- Playback Speed ---
 speedSlider?.addEventListener('input', (e) => {
   const val = parseFloat(e.target.value);
   setSpeed(val);
@@ -403,7 +383,6 @@ function setSpeed(val) {
   saveSettings();
 }
 
-// ─── Persistence ──────────────────────────────────────────────────────────────
 function saveSettings() {
   const settings = {
     volume: state.volume,
@@ -433,7 +412,6 @@ async function loadPlaylist() {
     }
   }
 
-  // Restore Settings
   state.alwaysOnTop = localStorage.getItem('af_on_top') === 'true';
   if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
   appWindow.setAlwaysOnTop(state.alwaysOnTop);
@@ -469,7 +447,6 @@ async function loadPlaylist() {
 
   if (settings.speed) setSpeed(settings.speed);
 
-  // Restore Sidebar Width
   const savedW = localStorage.getItem('af_sidebar_w');
   if (savedW) {
     document.documentElement.style.setProperty('--sidebar-w', savedW);
@@ -484,12 +461,10 @@ function updateVolBarUI() {
   updateVolIcon();
 }
 
-// ─── Global Shortcuts ────────────────────────────────────────────────────────
 async function setupShortcuts() {
   try {
     await unregisterAll();
 
-    // Register Play/Pause
     const playPauseKeys = ['MediaPlayPause', 'MediaPlay', 'MediaPause'];
     for (const k of playPauseKeys) {
       try {
@@ -497,7 +472,6 @@ async function setupShortcuts() {
       } catch { }
     }
 
-    // Register Next
     const nextKeys = ['MediaNextTrack', 'MediaNext'];
     for (const k of nextKeys) {
       try {
@@ -505,7 +479,6 @@ async function setupShortcuts() {
       } catch { }
     }
 
-    // Register Prev
     const prevKeys = ['MediaPrevTrack', 'MediaPrevious', 'MediaPrev'];
     for (const k of prevKeys) {
       try {
@@ -513,7 +486,6 @@ async function setupShortcuts() {
       } catch { }
     }
 
-    // Register Stop
     const stopKeys = ['MediaStop', 'MediaStopTrack'];
     for (const k of stopKeys) {
       try {
@@ -534,7 +506,6 @@ async function setupTrayListeners() {
   await listen('tray-prev', () => playPrev());
 }
 
-// ─── File Operations ─────────────────────────────────────────────────────────
 btnSavePlaylist?.addEventListener('click', async () => {
   const dict = translations[state.lang] || translations.ja;
   if (!state.tracks.length) { showToast(dict.toast_error_play); return; }
@@ -554,10 +525,9 @@ btnSavePlaylist?.addEventListener('click', async () => {
     }));
 
     const jsonStr = JSON.stringify(playlistData, null, 2);
-    // Use Rust command instead of JS plugin
     await invoke('save_text_file', { path: filePath, content: jsonStr });
     showToast(dict.toast_saved);
-  } catch (e) { 
+  } catch (e) {
     console.error('Save failed', e);
     showToast(dict.toast_error_generic);
   }
@@ -573,7 +543,6 @@ btnLoadPlaylist?.addEventListener('click', async () => {
     });
     if (!file) return;
 
-    // Use Rust command instead of JS plugin
     const content = await invoke('read_text_file', { path: file });
     const tracks = JSON.parse(content);
 
@@ -697,7 +666,6 @@ async function addPaths(paths, isInitial = false) {
   player.buildShuffleOrder();
 }
 
-// ─── Mini Mode ────────────────────────────────────────────────────────────────
 let normalSize = { width: 1000, height: 660 };
 
 async function toggleMiniMode() {
@@ -717,7 +685,6 @@ async function toggleMiniMode() {
 }
 btnMiniMode?.addEventListener('click', toggleMiniMode);
 
-// ─── Playlist UI ──────────────────────────────────────────────────────────────
 function onPlaylistRowClick(e, index) {
   if (e.target.closest('.pl-del')) { removeTrack(index); return; }
   if (state.current === index) togglePlay();
@@ -750,7 +717,6 @@ plSearch?.addEventListener('input', (e) => {
   ui.renderPlaylist(playlist, state.tracks, onPlaylistRowClick, e.target.value);
 });
 
-// ─── Track loading ────────────────────────────────────────────────────────────
 function loadTrack(index, autoplay = false) {
   if (index < 0 || index >= state.tracks.length) return;
   state.current = index;
@@ -767,7 +733,6 @@ function loadTrack(index, autoplay = false) {
   else ui.updatePlayUI(false);
 }
 
-// ─── Playback ─────────────────────────────────────────────────────────────────
 function togglePlay() {
   const dict = translations[state.lang] || translations.ja;
   if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
@@ -804,10 +769,9 @@ function resetPlayer() {
   state.current = -1;
   state.playing = false;
 
-  // 完全なオーディオリセット
   audio.pause();
-  audio.removeAttribute('src'); // srcを削除
-  audio.load(); // 読み込みを中断
+  audio.removeAttribute('src');
+  audio.load();
 
   const dict = translations[state.lang] || translations.ja;
   trackTitle.textContent = dict.select_track;
@@ -828,11 +792,10 @@ function resetPlayer() {
   if (artImg) artImg.style.display = 'none';
   if (artDefault) artDefault.style.display = 'flex';
   appWindow.setProgressBar({ progress: 0 });
-  
+
   stopVisualizer();
 }
 
-// ─── Audio Events ─────────────────────────────────────────────────────────────
 audio.addEventListener('timeupdate', () => {
   if (state.seekDrag || !audio.duration) return;
   const pct = (audio.currentTime / audio.duration) * 100;
@@ -867,7 +830,6 @@ audio.addEventListener('error', () => {
   }
 });
 
-// ─── Control Buttons ──────────────────────────────────────────────────────────
 playBtn.addEventListener('click', togglePlay);
 prevBtn.addEventListener('click', playPrev);
 nextBtn.addEventListener('click', playNext);
@@ -899,7 +861,6 @@ muteBtn.addEventListener('click', () => {
   updateVolIcon();
 });
 
-// ─── Seeker ───────────────────────────────────────────────────────────────────
 let seekRAF;
 function scrub(e) {
   const r = seeker.getBoundingClientRect();
@@ -926,7 +887,6 @@ seeker.addEventListener('keydown', e => {
   saveSettings();
 });
 
-// ─── Volume ───────────────────────────────────────────────────────────────────
 function setVol(e) {
   const r = volBar.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
@@ -948,7 +908,7 @@ volBar.addEventListener('wheel', e => {
   if (e.deltaY < 0) v = Math.min(1, v + 0.05);
   else v = Math.max(0, v - 0.05);
   v = Math.round(v * 100) / 100;
-  
+
   state.volume = v;
   state.muted = v === 0;
   audio.volume = v;
@@ -972,7 +932,6 @@ function updateVolIcon() {
   }
 }
 
-// ─── Drag & Drop ──────────────────────────────────────────────────────────────
 async function setupDragDrop() {
   if (isTauri && listen) {
     await listen('tauri://drag-drop', async (event) => {
@@ -993,7 +952,6 @@ async function setupDragDrop() {
       dropOverlay.classList.remove('active');
     });
   } else {
-    // Fallback for browser testing
     let dragCounter = 0;
     document.addEventListener('dragenter', e => {
       dragCounter++;
@@ -1017,7 +975,6 @@ async function setupDragDrop() {
   }
 }
 
-// ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
   switch (e.key) {
@@ -1036,33 +993,28 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 (async () => {
   try {
-    // Basic setup from state defaults
     audio.volume = state.volume;
-    updateVolBarUI(); // Initial UI sync
+    updateVolBarUI();
     player.buildShuffleOrder();
-    
+
     if (isTauri) {
-      // Dynamic Version Fetch
       if (tauriApp) {
         state.version = await tauriApp.getVersion();
         console.log("Audion Version Initialized:", state.version);
         const verEl = document.getElementById('appVersion');
         if (verEl) verEl.textContent = state.version;
       }
-      
+
       await setupShortcuts();
       await setupTrayListeners();
       await setupDragDrop();
 
-      // Listen for files opened via "Open with..." or dynamic single-instance args
       await tauriEvent.listen('file-open', async (event) => {
         handleFileOpen(event.payload);
       });
 
-      // Fetch initial args for cold boot (double-click to start)
       const initialArgs = await invoke('get_initial_args');
       handleFileOpen(initialArgs);
 
@@ -1082,15 +1034,14 @@ document.addEventListener('keydown', e => {
         }
       }
     } else {
-      setupDragDrop(); // Browser fallback
+      setupDragDrop();
     }
-    
+
     initVisualizer(audio);
     await loadPlaylist();
   } catch (e) {
     console.error("Init Error:", e);
   } finally {
-    // Ensure window is shown even if init fails
     if (isTauri) showApp();
   }
 })();
