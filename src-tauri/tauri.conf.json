@@ -42,6 +42,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "windows": {
+      "wix": {
+        "language": ["en-US", "ja-JP", "ko-KR", "zh-CN"]
+      },
+      "nsis": {
+        "languages": ["English", "Japanese", "Korean", "SimpChinese"],
+        "displayLanguageSelector": true
+      }
+    },
     "fileAssociations": [
       {
         "ext": ["mp3", "wav", "flac", "m4a", "ogg", "aac", "opus", "aiff", "wma"],
