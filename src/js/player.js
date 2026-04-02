@@ -4,6 +4,7 @@
 import { state } from './state.js';
 import { fmt, showToast } from './utils.js';
 import { updateActive, updatePlayUI } from './ui.js';
+import { startVisualizer, stopVisualizer } from './visualizer.js';
 
 const { convertFileSrc } = window.__TAURI__.core;
 
@@ -38,6 +39,7 @@ export function playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl) {
     if (vinylCenter) vinylCenter.classList.add('show');
     if (artGlow) artGlow.classList.add('active');
     updateActive(playlistEl);
+    startVisualizer();
   }).catch(e => {
     console.error(e);
     showToast('再生に失敗しました');
@@ -52,6 +54,7 @@ export function pauseAudio(audio, albumArt, playlistEl) {
     albumArt.classList.add('paused');
   }
   updateActive(playlistEl);
+  stopVisualizer();
 }
 
 // ─── Track Metadata ───────────────────────────────────────────────────────────
