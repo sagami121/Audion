@@ -18,10 +18,15 @@
 
 ## 本ソフトのスクリーンショット
 <div align="center">
+  <h3>メイン画面</h3>
   <img src="docs/1.png" width="800" alt="ホーム" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
   <br>
+  
+  <h3>設定画面</h3>
   <img src="docs/2.png" width="400" alt="設定" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
   <br>
+  
+  <h3>フィードバック画面</h3>
   <img src="docs/3.png" width="400" alt="フィードバック" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 </div>
 
