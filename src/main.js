@@ -1110,8 +1110,12 @@ function resetPlayer() {
 
   const dict = translations[state.lang] || translations.ja;
   trackTitle.textContent = dict.select_track;
+  trackTitle.setAttribute('data-i18n', 'select_track');
   trackTitle.classList.remove('marquee');
-  if (trackSub) trackSub.textContent = dict.welcome;
+  if (trackSub) {
+    trackSub.textContent = dict.welcome;
+    trackSub.setAttribute('data-i18n', 'welcome');
+  }
   curTime.textContent = '0:00'; durTime.textContent = '0:00';
   seekFill.style.width = '0'; seekThumb.style.left = '0';
   ui.updatePlayUI(false);

@@ -30,5 +30,5 @@ export const state = {
   },
   restoreSession: true,
   sidebarWidth: 270,
-  showLyrics: true,
+  showLyrics: false,
 };

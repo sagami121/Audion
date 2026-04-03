@@ -31,7 +31,11 @@ export function updateTrackUI(track) {
 
   if (!trackTitle || !trackSub) return;
 
-  trackTitle.textContent = track.name;
+  // Remove i18n attributes so translation updates don't overwrite track info
+  trackTitle.removeAttribute('data-i18n');
+  trackSub.removeAttribute('data-i18n');
+
+  trackTitle.textContent = track.name || 'Unknown Track';
   trackTitle.classList.remove('marquee');
 
   let subText = track.artist || 'Unknown Artist';
