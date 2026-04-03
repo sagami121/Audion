@@ -9,9 +9,11 @@
   ![Platform](https://img.shields.io/badge/platform-Windows-0078D4?style=for-the-badge&logo=windows)
   ![Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-FFB13B?style=for-the-badge&logo=tauri)
   ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+  ![winget](https://img.shields.io/github/v/release/sagami121/Audion?style=for-the-badge&label=winget&color=2C2C2C&logo=windows&logoColor=white)
   <br>
   ![Downloads (Latest)](https://img.shields.io/github/downloads/sagami121/Audion/latest/total?style=for-the-badge&color=8A2BE2&label=latest%20downloads)
   ![Downloads (Total)](https://img.shields.io/github/downloads/sagami121/Audion/total?style=for-the-badge&color=9370DB&label=total%20downloads)
+  
 </div>
 
 ---
