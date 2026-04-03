@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 audion-worker.js
+
+*.vscode
