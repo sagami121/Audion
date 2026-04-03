@@ -86,6 +86,16 @@ fn read_text_file(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_lyrics(path: String) -> Result<String, String> {
+    let lrc_path = std::path::Path::new(&path).with_extension("lrc");
+    if lrc_path.exists() {
+        fs::read_to_string(lrc_path).map_err(|e| e.to_string())
+    } else {
+        Err("No lyrics found".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -156,7 +166,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![read_audio_file, get_file_metadata, save_text_file, read_text_file, get_initial_args])
+        .invoke_handler(tauri::generate_handler![read_audio_file, get_file_metadata, save_text_file, read_text_file, get_initial_args, get_lyrics])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
