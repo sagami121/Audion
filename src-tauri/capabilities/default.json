@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-close",
@@ -16,6 +18,9 @@
     "core:window:allow-show",
     "core:window:allow-hide",
     "core:window:allow-set-size",
+    "core:window:allow-set-min-size",
+    "core:window:allow-set-max-size",
+    "core:window:allow-set-resizable",
     "core:window:allow-inner-size",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
@@ -26,13 +31,18 @@
     "core:app:allow-name",
     "dialog:default",
     "dialog:allow-open",
+    "dialog:allow-save",
     "fs:default",
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     }
   ]
 }
