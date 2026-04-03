@@ -1,6 +1,8 @@
 let audioCtx = null;
 let analyser = null;
 let source = null;
+let compressor = null;
+let makeupGain = null;
 let dataArray = null;
 let bufferLength = null;
 let canvas = null;
@@ -8,8 +10,11 @@ let ctx = null;
 let animationId = null;
 let isVisualizing = false;
 
-let primaryColor = 'var(--accent-color, #a78bfa)';
-let secondaryColor = 'var(--glow-color, #38bdf8)';
+let primaryColor = '#a78bfa';
+let secondaryColor = '#38bdf8';
+
+let filters = [];
+const FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
 export function initVisualizer(audioElement) {
   canvas = document.getElementById('visualizerCanvas');
@@ -26,7 +31,30 @@ export function initVisualizer(audioElement) {
       analyser = audioCtx.createAnalyser();
 
       source = audioCtx.createMediaElementSource(audioElement);
-      source.connect(analyser);
+      
+      // Create EQ filters
+      filters = FREQUENCIES.map(freq => {
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'peaking';
+        filter.frequency.value = freq;
+        filter.Q.value = 1;
+        filter.gain.value = 0;
+        return filter;
+      });
+
+      // Compressor
+      compressor = audioCtx.createDynamicsCompressor();
+      makeupGain = audioCtx.createGain();
+
+      // Connect: Source -> Filter0 -> ... -> Filter9 -> Compressor -> MakeupGain -> Analyser -> Destination
+      let lastNode = source;
+      filters.forEach(filter => {
+        lastNode.connect(filter);
+        lastNode = filter;
+      });
+      lastNode.connect(compressor);
+      compressor.connect(makeupGain);
+      makeupGain.connect(analyser);
       analyser.connect(audioCtx.destination);
 
       analyser.fftSize = 128;
@@ -35,6 +63,37 @@ export function initVisualizer(audioElement) {
     }
   } catch (e) {
     console.error("Visualizer initialization failed:", e);
+  }
+}
+
+export function updateEqGains(gains, enabled) {
+  if (!filters.length) return;
+  filters.forEach((filter, i) => {
+    filter.gain.setTargetAtTime(enabled ? gains[i] : 0, audioCtx.currentTime, 0.05);
+  });
+}
+
+export function updateCompSettings(settings, enabled) {
+  if (!compressor || !makeupGain) return;
+
+  const { threshold, knee, ratio, attack, release, makeup } = settings;
+  const time = audioCtx.currentTime;
+
+  if (enabled) {
+    compressor.threshold.setTargetAtTime(threshold, time, 0.05);
+    compressor.knee.setTargetAtTime(knee, time, 0.05);
+    compressor.ratio.setTargetAtTime(ratio, time, 0.05);
+    compressor.attack.setTargetAtTime(attack, time, 0.05);
+    compressor.release.setTargetAtTime(release, time, 0.05);
+    makeupGain.gain.setTargetAtTime(Math.pow(10, makeup / 20), time, 0.05);
+  } else {
+    // Default/Bypass
+    compressor.threshold.setTargetAtTime(-24, time, 0.05);
+    compressor.knee.setTargetAtTime(30, time, 0.05);
+    compressor.ratio.setTargetAtTime(1, time, 0.05); // Ratio 1:1 is bypass
+    compressor.attack.setTargetAtTime(0.003, time, 0.05);
+    compressor.release.setTargetAtTime(0.25, time, 0.05);
+    makeupGain.gain.setTargetAtTime(1, time, 0.05);
   }
 }
 

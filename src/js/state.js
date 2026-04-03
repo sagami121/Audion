@@ -15,4 +15,20 @@ export const state = {
   theme: 'dark',
   speed: 1.0,
   version: '0.0.0',
+  lyrics: [],
+  currentLyricIndex: -1,
+  eqEnabled: false,
+  eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 10-band EQ
+  compEnabled: false,
+  compSettings: {
+    threshold: -24,
+    knee: 30,
+    ratio: 12,
+    attack: 0.003,
+    release: 0.25,
+    makeup: 0
+  },
+  restoreSession: true,
+  sidebarWidth: 270,
+  showLyrics: true,
 };

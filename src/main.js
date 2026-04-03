@@ -4,7 +4,7 @@ import * as player from './js/player.js';
 import * as ui from './js/ui.js';
 import { translations } from './js/translations.js';
 import { CONFIG } from './js/config.js';
-import { initVisualizer, stopVisualizer } from './js/visualizer.js';
+import { initVisualizer, stopVisualizer, updateEqGains, updateCompSettings } from './js/visualizer.js';
 
 const isTauri = !!window.__TAURI__;
 if (!isTauri) {
@@ -24,40 +24,13 @@ const invoke = tauriCore?.invoke;
 const tauriApp = isTauri ? window.__TAURI__.app : null;
 const convertFileSrc = tauriCore?.convertFileSrc || ((s) => s);
 const dialogOpen = tauriDialog?.open;
+const dialogSave = tauriDialog?.save;
 const tauriGetCurrent = tauriWindow?.getCurrentWindow;
 const registerShortcut = tauriShortcut?.register;
 const unregisterAll = tauriShortcut?.unregisterAll;
 const listen = tauriEvent?.listen;
 
-let windowShown = false;
-const showApp = async () => {
-  if (windowShown || !isTauri) return;
-  try {
-    const win = tauriGetCurrent();
-    await win.show();
-    windowShown = true;
-  } catch (e) {
-    console.error("Failed to show window:", e);
-  }
-};
-
-if (isTauri) setTimeout(showApp, 1000);
-
-const appWindow = isTauri ? tauriGetCurrent() : {
-  minimize: () => { },
-  maximize: () => { },
-  unmaximize: () => { },
-  close: () => { },
-  isMaximized: () => Promise.resolve(false),
-  setAlwaysOnTop: () => { },
-  setProgressBar: () => { },
-  show: () => Promise.resolve(),
-};
-
-if (isTauri) showApp();
-
-const metaCache = new Map();
-
+// DOM Element Declarations
 const audio = document.getElementById('audio');
 const playBtn = document.getElementById('playBtn');
 const prevBtn = document.getElementById('prevBtn');
@@ -77,7 +50,10 @@ const volBar = document.getElementById('volBar');
 const volFill = document.getElementById('volFill');
 const volThumb = document.getElementById('volThumb');
 const trackTitle = document.getElementById('trackTitle');
+const trackSub = document.getElementById('trackSub');
 const albumArt = document.getElementById('albumArt');
+const artImg = document.getElementById('artImg');
+const artDefault = document.getElementById('artDefault');
 const artGlow = document.getElementById('artGlow');
 const vinylCenter = document.getElementById('vinylCenter');
 const playlist = document.getElementById('playlist');
@@ -108,6 +84,7 @@ const btnCloseSettings = document.getElementById('btnCloseSettings');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 const checkOnTop = document.getElementById('checkOnTop');
 const checkRestoreSession = document.getElementById('checkRestoreSession');
+const checkShowLyrics = document.getElementById('checkShowLyrics');
 const btnReportBug = document.getElementById('btnReportBug');
 const bugModal = document.getElementById('bugModal');
 const btnCloseBug = document.getElementById('btnCloseBug');
@@ -116,6 +93,92 @@ const bugTitle = document.getElementById('bugTitle');
 const bugCategory = document.getElementById('bugCategory');
 const bugDesc = document.getElementById('bugDesc');
 const bugError = document.getElementById('bugError');
+
+const lyricsInner = document.getElementById('lyricsInner');
+const checkEq = document.getElementById('checkEq');
+const eqContainer = document.getElementById('eqContainer');
+const eqOverlay = document.getElementById('eqOverlay');
+const eqStatusText = document.getElementById('eqStatusText');
+const btnEqReset = document.getElementById('btnEqReset');
+const btnShowEq = document.getElementById('btnShowEq');
+const eqSliders = document.querySelectorAll('.eq-slider');
+
+const eqTabBtns = document.querySelectorAll('.eq-tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+const compThreshold = document.getElementById('compThreshold');
+const compKnee = document.getElementById('compKnee');
+const compRatio = document.getElementById('compRatio');
+const compAttack = document.getElementById('compAttack');
+const compRelease = document.getElementById('compRelease');
+const compMakeup = document.getElementById('compMakeup');
+
+const valThreshold = document.getElementById('valThreshold');
+const valKnee = document.getElementById('valKnee');
+const valRatio = document.getElementById('valRatio');
+const valAttack = document.getElementById('valAttack');
+const valRelease = document.getElementById('valRelease');
+const valMakeup = document.getElementById('valMakeup');
+
+const verEl = document.getElementById('appVersion');
+
+const metaCache = new Map();
+let normalSize = { width: 1000, height: 660 };
+
+async function openDialog(options) {
+  if (dialogOpen) return dialogOpen(options);
+  if (invoke) return invoke('plugin:dialog|open', { options });
+  throw new Error('Dialog API unavailable');
+}
+
+async function saveDialog(options) {
+  if (dialogSave) return dialogSave(options);
+  if (invoke) return invoke('plugin:dialog|save', { options });
+  throw new Error('Dialog API unavailable');
+}
+
+async function readDirectory(path) {
+  if (window.__TAURI__?.fs?.readDir) return window.__TAURI__.fs.readDir(path);
+  if (invoke) return invoke('plugin:fs|read_dir', { path, options: {} });
+  throw new Error('FS API unavailable');
+}
+
+async function getAppVersionSafe() {
+  try {
+    if (tauriApp?.getVersion) return await tauriApp.getVersion();
+    if (invoke) return await invoke('plugin:app|version');
+  } catch (e) {
+    console.warn("Failed to get app version:", e);
+  }
+  return state.version;
+}
+
+let windowShown = false;
+const showApp = async () => {
+  if (windowShown || !isTauri) return;
+  try {
+    const win = tauriGetCurrent();
+    await win.show();
+    windowShown = true;
+  } catch (e) {
+    console.error("Failed to show window:", e);
+  }
+};
+
+if (isTauri) setTimeout(showApp, 1000);
+
+const appWindow = isTauri ? tauriGetCurrent() : {
+  minimize: () => { },
+  maximize: () => { },
+  unmaximize: () => { },
+  close: () => { },
+  isMaximized: () => Promise.resolve(false),
+  setAlwaysOnTop: () => { },
+  setProgressBar: () => { },
+  show: () => Promise.resolve(),
+};
+
+if (isTauri) showApp();
 
 tbMin.addEventListener('click', () => appWindow.minimize());
 tbMax.addEventListener('click', async () => {
@@ -154,6 +217,7 @@ document.addEventListener('mouseup', () => {
 btnSettings?.addEventListener('click', () => {
   if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
   if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
+  if (checkShowLyrics) checkShowLyrics.checked = state.showLyrics;
   if (langSelect) langSelect.value = state.lang;
   btnThemeDark?.classList.toggle('active', state.theme === 'dark');
   btnThemeLight?.classList.toggle('active', state.theme === 'light');
@@ -175,6 +239,14 @@ btnSaveSettings?.addEventListener('click', () => {
   if (checkRestoreSession && checkRestoreSession.checked !== state.restoreSession) {
     state.restoreSession = checkRestoreSession.checked;
     localStorage.setItem('af_restore_session', state.restoreSession);
+  }
+
+  if (checkShowLyrics && checkShowLyrics.checked !== state.showLyrics) {
+    state.showLyrics = checkShowLyrics.checked;
+    const lyricsContainer = document.getElementById('lyricsContainer');
+    if (lyricsContainer) {
+      lyricsContainer.style.display = state.showLyrics ? 'flex' : 'none';
+    }
   }
 
   const selectedTheme = btnThemeDark?.classList.contains('active') ? 'dark' : 'light';
@@ -383,6 +455,148 @@ function setSpeed(val) {
   saveSettings();
 }
 
+eqTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.dataset.tab;
+    eqTabBtns.forEach(b => b.classList.toggle('active', b === btn));
+    tabContents.forEach(content => {
+      content.classList.toggle('active', content.id === `${tabId}TabContent`);
+    });
+    updateEqUI();
+  });
+});
+
+btnShowEq?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  eqOverlay.classList.toggle('active');
+  btnShowEq.classList.toggle('active', eqOverlay.classList.contains('active'));
+  if (eqOverlay.classList.contains('active')) {
+    updateEqUI();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (eqOverlay?.classList.contains('active') && !eqOverlay.contains(e.target) && e.target !== btnShowEq && !btnShowEq.contains(e.target)) {
+    eqOverlay.classList.remove('active');
+    btnShowEq.classList.remove('active');
+  }
+});
+
+function updateEqUI() {
+  if (!eqContainer) return;
+  
+  // Update checkbox status based on active tab
+  const activeTabBtn = document.querySelector('.eq-tab-btn.active');
+  const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'eq';
+  const enabled = activeTab === 'eq' ? state.eqEnabled : state.compEnabled;
+  
+  if (checkEq) checkEq.checked = enabled;
+  const dict = translations[state.lang] || translations.ja;
+  if (eqStatusText) eqStatusText.textContent = enabled ? dict.eq_on : dict.eq_off;
+
+  // EQ Sliders
+  eqSliders.forEach((slider, i) => {
+    slider.value = state.eqGains[i];
+    const animBar = slider.parentElement.querySelector('.eq-bar-anim');
+    if (animBar) {
+      const h = ((state.eqGains[i] + 12) / 24) * 140;
+      animBar.style.height = `${h}px`;
+    }
+  });
+
+  // Comp Sliders
+  if (compThreshold) compThreshold.value = state.compSettings.threshold;
+  if (compKnee) compKnee.value = state.compSettings.knee;
+  if (compRatio) compRatio.value = state.compSettings.ratio;
+  if (compAttack) compAttack.value = state.compSettings.attack;
+  if (compRelease) compRelease.value = state.compSettings.release;
+  if (compMakeup) compMakeup.value = state.compSettings.makeup;
+
+  updateCompValuesUI();
+
+  updateEqGains(state.eqGains, state.eqEnabled);
+  updateCompSettings(state.compSettings, state.compEnabled);
+}
+
+function updateCompValuesUI() {
+  if (valThreshold) valThreshold.textContent = `${state.compSettings.threshold} dB`;
+  if (valKnee) valKnee.textContent = `${state.compSettings.knee} dB`;
+  if (valRatio) valRatio.textContent = `${parseFloat(state.compSettings.ratio).toFixed(1)}:1`;
+  if (valAttack) valAttack.textContent = `${Math.round(state.compSettings.attack * 1000)} ms`;
+  if (valRelease) valRelease.textContent = `${Math.round(state.compSettings.release * 1000)} ms`;
+  if (valMakeup) valMakeup.textContent = `${state.compSettings.makeup} dB`;
+}
+
+checkEq?.addEventListener('change', (e) => {
+  const activeTabBtn = document.querySelector('.eq-tab-btn.active');
+  const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'eq';
+  if (activeTab === 'eq') {
+    state.eqEnabled = e.target.checked;
+  } else {
+    state.compEnabled = e.target.checked;
+  }
+  updateEqUI();
+  saveSettings();
+});
+
+btnEqReset?.addEventListener('click', () => {
+  const activeTabBtn = document.querySelector('.eq-tab-btn.active');
+  const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'eq';
+  if (activeTab === 'eq') {
+    state.eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  } else {
+    state.compSettings = {
+      threshold: -24,
+      knee: 30,
+      ratio: 12,
+      attack: 0.003,
+      release: 0.25,
+      makeup: 0
+    };
+  }
+  updateEqUI();
+  saveSettings();
+});
+
+eqSliders.forEach(slider => {
+  slider.addEventListener('input', (e) => {
+    const idx = parseInt(e.target.dataset.index);
+    state.eqGains[idx] = parseFloat(e.target.value);
+    
+    const animBar = e.target.parentElement.querySelector('.eq-bar-anim');
+    if (animBar) {
+      const h = ((state.eqGains[idx] + 12) / 24) * 140;
+      animBar.style.height = `${h}px`;
+    }
+    
+    updateEqGains(state.eqGains, state.eqEnabled);
+  });
+  slider.addEventListener('change', () => {
+    saveSettings();
+  });
+});
+
+[compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach(slider => {
+  if (!slider) return;
+  slider.addEventListener('input', (e) => {
+    const id = e.target.id;
+    const val = parseFloat(e.target.value);
+    
+    if (id === 'compThreshold') state.compSettings.threshold = val;
+    if (id === 'compKnee') state.compSettings.knee = val;
+    if (id === 'compRatio') state.compSettings.ratio = val;
+    if (id === 'compAttack') state.compSettings.attack = val;
+    if (id === 'compRelease') state.compSettings.release = val;
+    if (id === 'compMakeup') state.compSettings.makeup = val;
+
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  slider.addEventListener('change', () => {
+    saveSettings();
+  });
+});
+
 function saveSettings() {
   const settings = {
     volume: state.volume,
@@ -394,6 +608,11 @@ function saveSettings() {
     lang: state.lang,
     theme: state.theme,
     speed: state.speed,
+    showLyrics: state.showLyrics,
+    eqEnabled: state.eqEnabled,
+    eqGains: state.eqGains,
+    compEnabled: state.compEnabled,
+    compSettings: state.compSettings,
   };
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
@@ -450,6 +669,27 @@ async function loadPlaylist() {
   else setTheme('dark');
 
   if (settings.speed) setSpeed(settings.speed);
+
+  state.showLyrics = settings.showLyrics !== undefined ? settings.showLyrics : true;
+  const lyricsContainer = document.getElementById('lyricsContainer');
+  if (lyricsContainer) {
+    lyricsContainer.style.display = state.showLyrics ? 'flex' : 'none';
+  }
+
+  state.eqEnabled = settings.eqEnabled || false;
+  state.eqGains = settings.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  
+  state.compEnabled = settings.compEnabled || false;
+  state.compSettings = settings.compSettings || {
+    threshold: -24,
+    knee: 30,
+    ratio: 12,
+    attack: 0.003,
+    release: 0.25,
+    makeup: 0
+  };
+
+  updateEqUI();
 
   const savedW = localStorage.getItem('af_sidebar_w');
   if (savedW) {
@@ -514,7 +754,7 @@ btnSavePlaylist?.addEventListener('click', async () => {
   const dict = translations[state.lang] || translations.ja;
   if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
   try {
-    const filePath = await window.__TAURI__.dialog.save({
+    const filePath = await saveDialog({
       title: dict.save_playlist,
       defaultPath: 'playlist.json',
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
@@ -540,7 +780,7 @@ btnSavePlaylist?.addEventListener('click', async () => {
 btnLoadPlaylist?.addEventListener('click', async () => {
   const dict = translations[state.lang] || translations.ja;
   try {
-    const file = await dialogOpen({
+    const file = await openDialog({
       title: dict.load_playlist,
       multiple: false,
       filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
@@ -568,7 +808,7 @@ btnLoadPlaylist?.addEventListener('click', async () => {
 btnOpenFiles.addEventListener('click', async () => {
   const dict = translations[state.lang] || translations.ja;
   try {
-    const files = await dialogOpen({
+    const files = await openDialog({
       title: dict.select_music,
       multiple: true,
       filters: [{ name: dict.music, extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'aiff', 'wma'] }],
@@ -585,13 +825,13 @@ btnOpenFiles.addEventListener('click', async () => {
 btnOpenFolder?.addEventListener('click', async () => {
   const dict = translations[state.lang] || translations.ja;
   try {
-    const folder = await dialogOpen({
+    const folder = await openDialog({
       title: dict.select_folder,
       directory: true,
       multiple: false,
     });
     if (!folder) return;
-    const entries = await window.__TAURI__.fs.readDir(folder);
+    const entries = await readDirectory(folder);
     const normalizedFolder = folder.endsWith('/') || folder.endsWith('\\') ? folder : `${folder}/`;
     const paths = entries
       .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name))
@@ -619,12 +859,15 @@ btnClearAll.addEventListener('click', () => {
 async function addPaths(paths, isInitial = false) {
   let added = 0;
   let skipped = 0;
+  
+  const normalizePath = (p) => p.replace(/\\/g, '/');
+
   for (const path of paths) {
-    if (state.tracks.some(t => t.path === path)) {
+    const normPath = normalizePath(path).toLowerCase();
+    if (state.tracks.some(t => normalizePath(t.path).toLowerCase() === normPath)) {
       skipped++;
       continue;
     }
-
     try {
       let meta;
       if (metaCache.has(path)) {
@@ -669,7 +912,7 @@ async function addPaths(paths, isInitial = false) {
       if (skipped) msg += ` (${skipped}${dict.toast_skipped})`;
       showToast(msg);
     }
-    if (state.current === -1) loadTrack(0, false);
+    if (!isInitial && state.current === -1) loadTrack(0, false);
     player.savePlaylist();
   } else if (skipped > 0 && !isInitial) {
     showToast(translations[state.lang].toast_all_skipped);
@@ -677,14 +920,16 @@ async function addPaths(paths, isInitial = false) {
   player.buildShuffleOrder();
 }
 
-let normalSize = { width: 1000, height: 660 };
-
 async function toggleMiniMode() {
+  if (!isTauri) {
+    showToast("Mini Mode is only available in the desktop app.");
+    return;
+  }
+  
   state.miniPlayer = !state.miniPlayer;
   document.body.classList.toggle('mini-view', state.miniPlayer);
 
-  const tbMax = document.getElementById('tbMax');
-  const { LogicalSize } = window.__TAURI__.window;
+  const LogicalSize = window.__TAURI__.window.LogicalSize;
 
   if (state.miniPlayer) {
     normalSize = await appWindow.innerSize();
@@ -700,10 +945,9 @@ async function toggleMiniMode() {
     btnMiniMode.classList.add('active');
   } else {
     await appWindow.setResizable(true);
-    await appWindow.setMinSize(new LogicalSize(400, 300)); // 最小サイズをリセット
-    await appWindow.setMaxSize(null); // 最大制限を解除
+    await appWindow.setMinSize(new LogicalSize(760, 520));
+    await appWindow.setMaxSize(null);
     
-    // PhysicalSize をそのまま渡すか、Logicalに変換して適用
     await appWindow.setSize(normalSize);
     await appWindow.setAlwaysOnTop(state.alwaysOnTop);
     
@@ -745,6 +989,66 @@ plSearch?.addEventListener('input', (e) => {
   ui.renderPlaylist(playlist, state.tracks, onPlaylistRowClick, e.target.value);
 });
 
+async function loadLyrics(path) {
+  state.lyrics = [];
+  state.currentLyricIndex = -1;
+  lyricsInner.innerHTML = '';
+  
+  try {
+    const lrc = await invoke('get_lyrics', { path });
+    const lines = lrc.split('\n');
+    const timeReg = /\[(\d+):(\d+\.\d+)\]/;
+    
+    state.lyrics = lines.map(line => {
+      const match = timeReg.exec(line);
+      if (match) {
+        const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
+        const text = line.replace(timeReg, '').trim();
+        return { time, text };
+      }
+      return null;
+    }).filter(l => l && l.text);
+
+    state.lyrics.forEach((l, i) => {
+      const div = document.createElement('div');
+      div.className = 'lyric-line';
+      div.textContent = l.text;
+      div.dataset.index = i;
+      lyricsInner.appendChild(div);
+    });
+  } catch (e) {
+    const dict = translations[state.lang] || translations.ja;
+    lyricsInner.innerHTML = `<div class="lyric-line" style="opacity:0.5">${dict.no_lyrics}</div>`;
+  }
+}
+
+function updateLyrics(time) {
+  if (!state.lyrics.length) return;
+  
+  let index = -1;
+  for (let i = 0; i < state.lyrics.length; i++) {
+    if (time >= state.lyrics[i].time) {
+      index = i;
+    } else {
+      break;
+    }
+  }
+
+  if (index !== state.currentLyricIndex) {
+    state.currentLyricIndex = index;
+    const lines = lyricsInner.querySelectorAll('.lyric-line');
+    lines.forEach((line, i) => {
+      line.classList.toggle('active', i === index);
+    });
+
+    if (index !== -1) {
+      const activeLine = lines[index];
+      const offset = lyricsInner.parentElement.clientHeight / 2 - activeLine.offsetTop - activeLine.clientHeight / 2;
+      lyricsInner.style.transform = `translateY(${offset}px)`;
+    }
+  }
+}
+
 function loadTrack(index, autoplay = false) {
   if (index < 0 || index >= state.tracks.length) return;
   state.current = index;
@@ -757,6 +1061,9 @@ function loadTrack(index, autoplay = false) {
   albumArt.classList.remove('spinning');
   albumArt.classList.remove('paused');
   artGlow.classList.remove('active');
+  
+  loadLyrics(t.path);
+
   if (autoplay) player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
   else ui.updatePlayUI(false);
 }
@@ -804,7 +1111,6 @@ function resetPlayer() {
   const dict = translations[state.lang] || translations.ja;
   trackTitle.textContent = dict.select_track;
   trackTitle.classList.remove('marquee');
-  const trackSub = document.getElementById('trackSub');
   if (trackSub) trackSub.textContent = dict.welcome;
   curTime.textContent = '0:00'; durTime.textContent = '0:00';
   seekFill.style.width = '0'; seekThumb.style.left = '0';
@@ -815,11 +1121,13 @@ function resetPlayer() {
   }
   vinylCenter.classList.remove('show');
   artGlow.classList.remove('active');
-  const artImg = document.getElementById('artImg');
-  const artDefault = document.getElementById('artDefault');
   if (artImg) artImg.style.display = 'none';
   if (artDefault) artDefault.style.display = 'flex';
   appWindow.setProgressBar({ progress: 0 });
+  
+  lyricsInner.innerHTML = '';
+  state.lyrics = [];
+  state.currentLyricIndex = -1;
 
   stopVisualizer();
 }
@@ -832,6 +1140,8 @@ audio.addEventListener('timeupdate', () => {
   seeker.setAttribute('aria-valuenow', Math.round(pct));
   curTime.textContent = fmt(audio.currentTime);
   appWindow.setProgressBar({ progress: pct / 100 });
+  
+  updateLyrics(audio.currentTime);
 
   if (Math.floor(audio.currentTime) % 5 === 0) saveSettings();
 });
@@ -1028,12 +1338,9 @@ document.addEventListener('keydown', e => {
     player.buildShuffleOrder();
 
     if (isTauri) {
-      if (tauriApp) {
-        state.version = await tauriApp.getVersion();
-        console.log("Audion Version Initialized:", state.version);
-        const verEl = document.getElementById('appVersion');
-        if (verEl) verEl.textContent = state.version;
-      }
+      state.version = await getAppVersionSafe();
+      console.log("Audion Version Initialized:", state.version);
+      if (verEl) verEl.textContent = state.version;
 
       await setupShortcuts();
       await setupTrayListeners();
