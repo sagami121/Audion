@@ -484,12 +484,15 @@ document.addEventListener('click', (e) => {
 
 function updateEqUI() {
   if (!eqContainer) return;
-  
+
+  // Create preset buttons
+  populatePresetSelect();
+
   // Update checkbox status based on active tab
   const activeTabBtn = document.querySelector('.eq-tab-btn.active');
   const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'eq';
   const enabled = activeTab === 'eq' ? state.eqEnabled : state.compEnabled;
-  
+
   if (checkEq) checkEq.checked = enabled;
   const dict = translations[state.lang] || translations.ja;
   if (eqStatusText) eqStatusText.textContent = enabled ? dict.eq_on : dict.eq_off;
@@ -558,18 +561,81 @@ btnEqReset?.addEventListener('click', () => {
   saveSettings();
 });
 
+// EQ Presets
+const eqPresetsSelect = document.getElementById('eqPresetsSelect');
+
+function populatePresetSelect() {
+  if (!eqPresetsSelect) return;
+  const dict = translations[state.lang] || translations.ja;
+  const currentVal = eqPresetsSelect.value;
+  eqPresetsSelect.innerHTML = '';
+
+  const manualOpt = document.createElement('option');
+  manualOpt.value = 'manual';
+  manualOpt.textContent = dict.preset_manual || '手動';
+  eqPresetsSelect.appendChild(manualOpt);
+
+  const flatOpt = document.createElement('option');
+  flatOpt.value = 'flat';
+  flatOpt.textContent = dict.preset_flat || 'フラット';
+  eqPresetsSelect.appendChild(flatOpt);
+
+  Object.keys(state.eqPresets).forEach(presetName => {
+    const opt = document.createElement('option');
+    opt.value = presetName;
+    opt.textContent = dict['preset_' + presetName] || presetName;
+    eqPresetsSelect.appendChild(opt);
+  });
+
+  if (currentVal) eqPresetsSelect.value = currentVal;
+}
+
+eqPresetsSelect?.addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (val === 'manual') return;
+  if (val === 'flat') {
+    state.eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    state.eqEnabled = true;
+    updateEqUI();
+    saveSettings();
+  } else {
+    applyEqPreset(val);
+  }
+});
+
+function applyEqPreset(presetName) {
+  const preset = state.eqPresets[presetName];
+  if (!preset) return;
+
+  state.eqGains = [...preset];
+  state.eqEnabled = true;
+  updateEqUI();
+  saveSettings();
+
+  const dict = translations[state.lang] || translations.ja;
+  showToast(`${dict['preset_' + presetName] || presetName} を適用しました`);
+}
+
 eqSliders.forEach(slider => {
   slider.addEventListener('input', (e) => {
     const idx = parseInt(e.target.dataset.index);
     state.eqGains[idx] = parseFloat(e.target.value);
-    
+    if (eqPresetsSelect) eqPresetsSelect.value = 'manual';
+
     const animBar = e.target.parentElement.querySelector('.eq-bar-anim');
     if (animBar) {
       const h = ((state.eqGains[idx] + 12) / 24) * 140;
       animBar.style.height = `${h}px`;
     }
-    
+
     updateEqGains(state.eqGains, state.eqEnabled);
+  });
+  slider.addEventListener('dblclick', (e) => {
+    const idx = parseInt(e.target.dataset.index);
+    state.eqGains[idx] = 0;
+    slider.value = 0;
+    updateEqUI();
+    saveSettings();
   });
   slider.addEventListener('change', () => {
     saveSettings();
@@ -581,7 +647,7 @@ eqSliders.forEach(slider => {
   slider.addEventListener('input', (e) => {
     const id = e.target.id;
     const val = parseFloat(e.target.value);
-    
+
     if (id === 'compThreshold') state.compSettings.threshold = val;
     if (id === 'compKnee') state.compSettings.knee = val;
     if (id === 'compRatio') state.compSettings.ratio = val;
@@ -591,6 +657,27 @@ eqSliders.forEach(slider => {
 
     updateCompValuesUI();
     updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  slider.addEventListener('dblclick', (e) => {
+    const id = e.target.id;
+    const defaults = {
+      compThreshold: -24,
+      compKnee: 30,
+      compRatio: 12,
+      compAttack: 0.003,
+      release: 0.25,
+      compMakeup: 0
+    };
+    if (id === 'compThreshold') state.compSettings.threshold = -24;
+    if (id === 'compKnee') state.compSettings.knee = 30;
+    if (id === 'compRatio') state.compSettings.ratio = 12;
+    if (id === 'compAttack') state.compSettings.attack = 0.003;
+    if (id === 'compRelease') state.compSettings.release = 0.25;
+    if (id === 'compMakeup') state.compSettings.makeup = 0;
+
+    slider.value = state.compSettings[id.replace('comp', '').toLowerCase()] || 0;
+    updateEqUI();
+    saveSettings();
   });
   slider.addEventListener('change', () => {
     saveSettings();
@@ -678,7 +765,7 @@ async function loadPlaylist() {
 
   state.eqEnabled = settings.eqEnabled || false;
   state.eqGains = settings.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  
+
   state.compEnabled = settings.compEnabled || false;
   state.compSettings = settings.compSettings || {
     threshold: -24,
@@ -698,7 +785,7 @@ async function loadPlaylist() {
 }
 
 function updateVolBarUI() {
-  const ratio = state.volume;
+  const ratio = state.muted ? 0 : state.volume;
   volFill.style.width = (ratio * 100) + '%';
   volThumb.style.left = (ratio * 100) + '%';
   volBar.setAttribute('aria-valuenow', Math.round(ratio * 100));
@@ -859,7 +946,7 @@ btnClearAll.addEventListener('click', () => {
 async function addPaths(paths, isInitial = false) {
   let added = 0;
   let skipped = 0;
-  
+
   const normalizePath = (p) => p.replace(/\\/g, '/');
 
   for (const path of paths) {
@@ -890,8 +977,8 @@ async function addPaths(paths, isInitial = false) {
       const idx = state.tracks.length - 1;
       const filter = plSearch.value.toLowerCase();
       const track = state.tracks[idx];
-      const matchesFilter = !filter || 
-        track.name.toLowerCase().includes(filter) || 
+      const matchesFilter = !filter ||
+        track.name.toLowerCase().includes(filter) ||
         (track.artist && track.artist.toLowerCase().includes(filter));
 
       if (matchesFilter) {
@@ -925,7 +1012,7 @@ async function toggleMiniMode() {
     showToast("Mini Mode is only available in the desktop app.");
     return;
   }
-  
+
   state.miniPlayer = !state.miniPlayer;
   document.body.classList.toggle('mini-view', state.miniPlayer);
 
@@ -934,23 +1021,23 @@ async function toggleMiniMode() {
   if (state.miniPlayer) {
     normalSize = await appWindow.innerSize();
     const miniSize = new LogicalSize(860, 80);
-    
+
     await appWindow.setResizable(false);
     await appWindow.setMinSize(miniSize);
     await appWindow.setMaxSize(miniSize);
     await appWindow.setSize(miniSize);
     await appWindow.setAlwaysOnTop(true);
-    
+
     if (tbMax) tbMax.style.display = 'none';
     btnMiniMode.classList.add('active');
   } else {
     await appWindow.setResizable(true);
     await appWindow.setMinSize(new LogicalSize(760, 520));
     await appWindow.setMaxSize(null);
-    
+
     await appWindow.setSize(normalSize);
     await appWindow.setAlwaysOnTop(state.alwaysOnTop);
-    
+
     if (tbMax) tbMax.style.display = 'flex';
     btnMiniMode.classList.remove('active');
   }
@@ -993,12 +1080,12 @@ async function loadLyrics(path) {
   state.lyrics = [];
   state.currentLyricIndex = -1;
   lyricsInner.innerHTML = '';
-  
+
   try {
     const lrc = await invoke('get_lyrics', { path });
     const lines = lrc.split('\n');
     const timeReg = /\[(\d+):(\d+\.\d+)\]/;
-    
+
     state.lyrics = lines.map(line => {
       const match = timeReg.exec(line);
       if (match) {
@@ -1024,7 +1111,7 @@ async function loadLyrics(path) {
 
 function updateLyrics(time) {
   if (!state.lyrics.length) return;
-  
+
   let index = -1;
   for (let i = 0; i < state.lyrics.length; i++) {
     if (time >= state.lyrics[i].time) {
@@ -1061,7 +1148,7 @@ function loadTrack(index, autoplay = false) {
   albumArt.classList.remove('spinning');
   albumArt.classList.remove('paused');
   artGlow.classList.remove('active');
-  
+
   loadLyrics(t.path);
 
   if (autoplay) player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
@@ -1128,7 +1215,7 @@ function resetPlayer() {
   if (artImg) artImg.style.display = 'none';
   if (artDefault) artDefault.style.display = 'flex';
   appWindow.setProgressBar({ progress: 0 });
-  
+
   lyricsInner.innerHTML = '';
   state.lyrics = [];
   state.currentLyricIndex = -1;
@@ -1144,7 +1231,7 @@ audio.addEventListener('timeupdate', () => {
   seeker.setAttribute('aria-valuenow', Math.round(pct));
   curTime.textContent = fmt(audio.currentTime);
   appWindow.setProgressBar({ progress: pct / 100 });
-  
+
   updateLyrics(audio.currentTime);
 
   if (Math.floor(audio.currentTime) % 5 === 0) saveSettings();
@@ -1200,7 +1287,7 @@ muteBtn.addEventListener('click', () => {
   state.muted = !state.muted;
   audio.volume = state.muted ? 0 : state.volume;
   saveSettings();
-  updateVolIcon();
+  updateVolBarUI();
 });
 
 let seekRAF;
@@ -1261,16 +1348,21 @@ volBar.addEventListener('wheel', e => {
 function updateVolIcon() {
   const v = state.muted ? 0 : state.volume;
   if (v === 0) {
-    volIcon.innerHTML = `<path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
-      <path d="M13 9h4M13 6.5l4 2.5-4 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`;
+    volIcon.innerHTML = `<img src="assets/mute.png" width="18" height="18" style="filter: brightness(0) invert(0.8); display: block;">`;
   } else if (v < 0.3) {
-    volIcon.innerHTML = `<path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>`;
+    volIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
+    </svg>`;
   } else if (v < 0.7) {
-    volIcon.innerHTML = `<path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
-      <path d="M11 6a4 4 0 010 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`;
+    volIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
+      <path d="M11 6a4 4 0 010 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`;
   } else {
-    volIcon.innerHTML = `<path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
-      <path d="M11 6a4 4 0 010 6M13.5 3.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`;
+    volIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
+      <path d="M11 6a4 4 0 010 6M13.5 3.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`;
   }
 }
 
@@ -1377,6 +1469,7 @@ document.addEventListener('keydown', e => {
     }
 
     initVisualizer(audio);
+    populatePresetSelect();
     await loadPlaylist();
   } catch (e) {
     console.error("Init Error:", e);

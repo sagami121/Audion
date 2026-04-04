@@ -31,4 +31,14 @@ export const state = {
   restoreSession: true,
   sidebarWidth: 270,
   showLyrics: false,
+  eqPresets: {
+    bass: [6, 5, 3, 1, 0, -1, -2, -3, -4, -5],
+    reggae: [3, 2, 1, 0, 0, -1, -2, -3, -3, -2],
+    pop: [-2, -1, 0, 2, 4, 3, 1, -1, -2, -3],
+    techno: [5, 4, 2, 0, -2, 0, 3, 5, 4, 2],
+    live: [3, 2, 1, 0, 0, 1, 3, 4, 4, 3],
+    rock: [4, 3, 1, -1, -2, 0, 2, 4, 5, 5],
+    jazz: [2, 1, 0, -1, -2, -1, 1, 3, 3, 2],
+    classical: [1, 2, 1, 0, -1, 0, 2, 3, 3, 1]
+  }
 };

@@ -66,6 +66,7 @@ body {
   -webkit-user-select: none;
   transition: background-color var(--transition), color var(--transition);
 }
+
 .titlebar {
   position: fixed;
   top: 0;
@@ -80,7 +81,7 @@ body {
   z-index: 9999;
   padding: 0 0 0 12px;
   transition: background-color var(--transition), border-color var(--transition);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .titlebar-logo {
@@ -705,10 +706,12 @@ body.mini-view .lyrics-container {
   left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
   width: 90%;
-  max-width: 650px; /* Slightly wider */
+  max-width: 650px;
+  /* Slightly wider */
   height: auto;
   min-height: 320px;
-  background: rgba(22, 22, 22, 0.98); /* Slightly more opaque */
+  background: rgba(22, 22, 22, 0.98);
+  /* Slightly more opaque */
   backdrop-filter: blur(20px);
   z-index: 1000;
   display: flex;
@@ -853,7 +856,8 @@ body.mini-view .lyrics-container {
   gap: 12px;
   flex: 1;
   position: relative;
-  min-width: 35px; /* Ensure enough space for slider and label */
+  min-width: 35px;
+  /* Ensure enough space for slider and label */
 }
 
 .eq-band span {
@@ -877,7 +881,8 @@ body.mini-view .lyrics-container {
 
 .eq-bar-anim {
   position: absolute;
-  bottom: 28px; /* Adjusted for label */
+  bottom: 28px;
+  /* Adjusted for label */
   width: 6px;
   background: var(--accent-color, #a78bfa);
   border-radius: 3px;
@@ -1437,6 +1442,14 @@ body.mini-view .lyrics-container {
   filter: brightness(0) invert(0) !important;
 }
 
+#volIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 .volume-section {
   display: flex;
   align-items: center;
@@ -1622,6 +1635,26 @@ body.mini-view .lyrics-container {
   color: var(--bg);
   border-color: var(--text);
   transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+}
+
+#btnEqReset {
+  background: var(--bg3);
+  color: #fff;
+  border: 1px solid var(--border);
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+#btnEqReset:hover {
+  background: var(--primary);
+  border-color: var(--text-3);
+  transform: translateY(-1px);
+}
+
+#btnEqReset:active {
+  transform: scale(0.92);
+  background: var(--border);
+  transition: transform 0.05s;
 }
 
 .pl-badge {

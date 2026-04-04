@@ -88,7 +88,18 @@ export const translations = {
     makeup: "Makeup ゲイン",
     eq_on: "ON",
     eq_off: "OFF",
-    reset: "リセット"
+    reset: "リセット",
+    presets: "プリセット",
+    preset_manual: "手動",
+    preset_flat: "フラット",
+    preset_bass: "重低音強化",
+    preset_reggae: "レゲエ",
+    preset_pop: "ポップ",
+    preset_techno: "テクノ",
+    preset_live: "ライブ",
+    preset_rock: "ロック",
+    preset_jazz: "ジャズ",
+    preset_classical: "クラシック"
   },
   en: {
     app_title: "Audion — Music Player",
@@ -179,7 +190,18 @@ export const translations = {
     makeup: "Makeup Gain",
     eq_on: "ON",
     eq_off: "OFF",
-    reset: "Reset"
+    reset: "Reset",
+    presets: "Presets",
+    preset_manual: "Manual",
+    preset_flat: "Flat",
+    preset_bass: "Bass Boost",
+    preset_reggae: "Reggae",
+    preset_pop: "Pop",
+    preset_techno: "Techno",
+    preset_live: "Live",
+    preset_rock: "Rock",
+    preset_jazz: "Jazz",
+    preset_classical: "Classical"
   },
   ko: {
     app_title: "Audion — 음악 플레이어",
@@ -271,7 +293,18 @@ export const translations = {
     makeup: "메이크업 게인",
     eq_on: "ON",
     eq_off: "OFF",
-    reset: "초기화"
+    reset: "초기화",
+    presets: "프리셋",
+    preset_manual: "수동",
+    preset_flat: "플랫",
+    preset_bass: "중저음 강화",
+    preset_reggae: "레게",
+    preset_pop: "팝",
+    preset_techno: "테크노",
+    preset_live: "라이브",
+    preset_rock: "록",
+    preset_jazz: "재즈",
+    preset_classical: "클래식"
   },
 
   zh: {
@@ -363,6 +396,17 @@ export const translations = {
     makeup: "补偿增益",
     eq_on: "开启",
     eq_off: "关闭",
-    reset: "重置"
+    reset: "重置",
+    presets: "预设",
+    preset_manual: "手动",
+    preset_flat: "平坦",
+    preset_bass: "重低音增强",
+    preset_reggae: "雷鬼",
+    preset_pop: "流行",
+    preset_techno: "铁克诺",
+    preset_live: "现场",
+    preset_rock: "摇滚",
+    preset_jazz: "爵士",
+    preset_classical: "古典"
   }
 };
