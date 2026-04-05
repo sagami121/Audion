@@ -74,6 +74,7 @@ export const translations = {
     show_lyrics: "歌詞を表示する",
     save_settings: "設定を保存",
     toast_settings_saved: "設定を保存しました",
+    check_update: "アップデートを確認",
     lyrics: "歌詞",
     no_lyrics: "歌詞が見つかりません",
     audioeffects: "オーディオエフェクト",
@@ -99,7 +100,16 @@ export const translations = {
     preset_live: "ライブ",
     preset_rock: "ロック",
     preset_jazz: "ジャズ",
-    preset_classical: "クラシック"
+    preset_classical: "クラシック",
+    update_available: "アップデートがあります",
+    update_desc: "新機能と修正が含まれています",
+    update_now: "今すぐ更新",
+    update_later: "後で通知",
+    toast_update_checking: "更新を確認中...",
+    toast_update_none: "最新バージョンです",
+    toast_update_error: "更新の確認に失敗しました",
+    toast_update_downloading: "アップデートをダウンロード中...",
+    release_notes: "更新内容"
   },
   en: {
     app_title: "Audion — Music Player",
@@ -201,7 +211,16 @@ export const translations = {
     preset_live: "Live",
     preset_rock: "Rock",
     preset_jazz: "Jazz",
-    preset_classical: "Classical"
+    preset_classical: "Classical",
+    update_available: "Update Available",
+    update_desc: "New features and fixes are available",
+    update_now: "Update Now",
+    update_later: "Later",
+    toast_update_checking: "Checking for updates...",
+    toast_update_none: "You are on the latest version",
+    toast_update_error: "Failed to check for updates",
+    toast_update_downloading: "Downloading update...",
+    release_notes: "Release Notes"
   },
   ko: {
     app_title: "Audion — 음악 플레이어",
@@ -304,7 +323,16 @@ export const translations = {
     preset_live: "라이브",
     preset_rock: "록",
     preset_jazz: "재즈",
-    preset_classical: "클래식"
+    preset_classical: "클래식",
+    update_available: "업데이트 가능",
+    update_desc: "새로운 기능과 수정 사항이 있습니다",
+    update_now: "지금 업데이트",
+    update_later: "나중에",
+    toast_update_checking: "업데이트 확인 중...",
+    toast_update_none: "최신 버전입니다",
+    toast_update_error: "업데이트 확인 실패",
+    toast_update_downloading: "업데이트를 다운로드 중...",
+    release_notes: "업데이트 내용"
   },
 
   zh: {
@@ -407,6 +435,15 @@ export const translations = {
     preset_live: "现场",
     preset_rock: "摇滚",
     preset_jazz: "爵士",
-    preset_classical: "古典"
+    preset_classical: "古典",
+    update_available: "有可用更新",
+    update_desc: "包含新功能和修复",
+    update_now: "立即更新",
+    update_later: "稍后",
+    toast_update_checking: "正在检查更新...",
+    toast_update_none: "已是最新版本",
+    toast_update_error: "检查更新失败",
+    toast_update_downloading: "正在下载更新...",
+    release_notes: "更新内容"
   }
 };

@@ -19,8 +19,14 @@
           document.documentElement.style.setProperty('--sidebar-w', savedW);
         }
 
+        const vol = settings.volume !== undefined ? settings.volume : 0.8;
+        const volPct = (settings.muted ? 0 : vol) * 100;
+        document.documentElement.style.setProperty('--init-vol', volPct + '%');
+        
         window.addEventListener('DOMContentLoaded', () => {
           document.body.classList.add(theme + '-theme');
+          const volLbl = document.getElementById('volLbl');
+          if (volLbl) volLbl.textContent = Math.round(volPct) + '%';
         });
       } catch (e) { }
     })();
@@ -353,10 +359,11 @@
           </div>
         </button>
         <div class="vol-bar" id="volBar" role="slider" tabindex="0" data-i18n-label="volume" aria-label="音量"
-          aria-valuemin="0" aria-valuemax="100" aria-valuenow="80">
-          <div class="vol-fill" id="volFill" style="width:80%"></div>
-          <div class="vol-thumb" id="volThumb" style="left:80%"></div>
+          aria-valuemin="0" aria-valuemax="100">
+          <div class="vol-fill" id="volFill" style="width:var(--init-vol, 0%)"></div>
+          <div class="vol-thumb" id="volThumb" style="left:var(--init-vol, 0%)"></div>
         </div>
+        <span class="vol-lbl" id="volLbl">0%</span>
       </div>
 
       <div class="speed-ctrl">
@@ -443,6 +450,12 @@
         <button class="btn-primary" id="btnSaveSettings" style="width: 100%; margin-bottom: 15px;"
           data-i18n="save_settings">設定を保存</button>
         <div class="setting-item">
+          <button class="btn-secondary" id="btnCheckUpdate" style="width: 100%; margin-bottom: 12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span data-i18n="check_update">アップデートを確認</span>
+          </button>
           <button class="btn-secondary" id="btnReportBug">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 6px;">
               <path d="M8 11v.01M8 8V5m7 3a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="1.5"
@@ -491,7 +504,41 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="releaseNotesModal">
+    <div class="modal-card" style="max-width: 500px; width: 90%;">
+      <div class="modal-hdr">
+        <h3 data-i18n="release_notes">更新内容</h3>
+        <button class="modal-close" id="btnCloseReleaseNotes">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="release-notes-content" id="releaseNotesContent" style="white-space: pre-wrap; font-size: 13px; line-height: 1.6; max-height: 300px; overflow-y: auto; color: var(--text-color); margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 6px;"></div>
+        <button class="btn-primary" id="btnReleaseNotesOk" style="width: 100%;">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
+
+  <div class="update-toast" id="updateToast">
+    <div class="update-toast-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="update-toast-content">
+      <div class="update-toast-title" data-i18n="update_available">アップデートがあります</div>
+      <div class="update-toast-desc" data-i18n="update_desc">新機能と修正が含まれています</div>
+      <div class="update-toast-actions">
+        <button class="update-btn-now" id="btnUpdateNow" data-i18n="update_now">今すぐ更新</button>
+        <button class="update-btn-later" id="btnUpdateLater" data-i18n="update_later">後で通知</button>
+        <button class="update-btn-info" id="btnUpdateInfo" data-i18n-title="release_notes" title="更新内容">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <audio id="audio" crossorigin="anonymous"></audio>
   <canvas id="colorCanvas" style="display:none;"></canvas>

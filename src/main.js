@@ -5,6 +5,7 @@ import * as ui from './js/ui.js';
 import { translations } from './js/translations.js';
 import { CONFIG } from './js/config.js';
 import { initVisualizer, stopVisualizer, updateEqGains, updateCompSettings } from './js/visualizer.js';
+import { initUpdater } from './js/update.js';
 
 const isTauri = !!window.__TAURI__;
 if (!isTauri) {
@@ -15,13 +16,12 @@ if (!isTauri) {
 }
 
 const tauriCore = isTauri ? window.__TAURI__.core : null;
-const tauriDialog = isTauri ? window.__TAURI__.dialog : null;
-const tauriWindow = isTauri ? window.__TAURI__.window : null;
-const tauriShortcut = isTauri ? window.__TAURI__.globalShortcut : null;
-const tauriEvent = isTauri ? window.__TAURI__.event : null;
+const tauriDialog = isTauri ? (window.__TAURI__.dialog || window.__TAURI__.plugins?.dialog) : null;
+const tauriWindow = isTauri ? (window.__TAURI__.window || window.__TAURI__.plugins?.window) : null;
+const tauriShortcut = isTauri ? (window.__TAURI__.globalShortcut || window.__TAURI__.plugins?.globalShortcut) : null;
+const tauriEvent = isTauri ? (window.__TAURI__.event || window.__TAURI__.plugins?.event) : null;
 
 const invoke = tauriCore?.invoke;
-const tauriApp = isTauri ? window.__TAURI__.app : null;
 const convertFileSrc = tauriCore?.convertFileSrc || ((s) => s);
 const dialogOpen = tauriDialog?.open;
 const dialogSave = tauriDialog?.save;
@@ -49,6 +49,8 @@ const durTime = document.getElementById('durTime');
 const volBar = document.getElementById('volBar');
 const volFill = document.getElementById('volFill');
 const volThumb = document.getElementById('volThumb');
+const volLbl = document.getElementById('volLbl');
+
 const trackTitle = document.getElementById('trackTitle');
 const trackSub = document.getElementById('trackSub');
 const albumArt = document.getElementById('albumArt');
@@ -145,8 +147,9 @@ async function readDirectory(path) {
 
 async function getAppVersionSafe() {
   try {
-    if (tauriApp?.getVersion) return await tauriApp.getVersion();
-    if (invoke) return await invoke('plugin:app|version');
+    if (invoke) {
+      return await invoke('get_version');
+    }
   } catch (e) {
     console.warn("Failed to get app version:", e);
   }
@@ -723,20 +726,10 @@ async function loadPlaylist() {
   appWindow.setAlwaysOnTop(state.alwaysOnTop);
 
   const settings = JSON.parse(localStorage.getItem('af_settings') || '{}');
-  if (settings.volume !== undefined) {
-    state.volume = settings.volume;
-    audio.volume = state.muted ? 0 : state.volume;
-    updateVolBarUI();
-  }
-  if (settings.shuffle !== undefined) {
-    state.shuffle = settings.shuffle;
-    shuffleBtn.classList.toggle('active', state.shuffle);
-  }
-  if (settings.repeat !== undefined) {
-    state.repeat = settings.repeat;
-    repeatBtn.classList.toggle('active', state.repeat !== 'none');
-    repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
-  }
+
+  shuffleBtn.classList.toggle('active', state.shuffle);
+  repeatBtn.classList.toggle('active', state.repeat !== 'none');
+  repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
 
   if (state.restoreSession && settings.current !== undefined && state.tracks[settings.current]) {
     loadTrack(settings.current, false);
@@ -786,9 +779,11 @@ async function loadPlaylist() {
 
 function updateVolBarUI() {
   const ratio = state.muted ? 0 : state.volume;
-  volFill.style.width = (ratio * 100) + '%';
-  volThumb.style.left = (ratio * 100) + '%';
-  volBar.setAttribute('aria-valuenow', Math.round(ratio * 100));
+  const pct = Math.round(ratio * 100);
+  volFill.style.width = pct + '%';
+  volThumb.style.left = pct + '%';
+  volBar.setAttribute('aria-valuenow', pct);
+  if (volLbl) volLbl.textContent = pct + '%';
   updateVolIcon();
 }
 
@@ -1223,6 +1218,7 @@ function resetPlayer() {
   stopVisualizer();
 }
 
+let lastSavedSec = -1;
 audio.addEventListener('timeupdate', () => {
   if (state.seekDrag || !audio.duration) return;
   const pct = (audio.currentTime / audio.duration) * 100;
@@ -1234,7 +1230,11 @@ audio.addEventListener('timeupdate', () => {
 
   updateLyrics(audio.currentTime);
 
-  if (Math.floor(audio.currentTime) % 5 === 0) saveSettings();
+  const curSec = Math.floor(audio.currentTime);
+  if (curSec % 5 === 0 && curSec !== lastSavedSec) {
+    lastSavedSec = curSec;
+    saveSettings();
+  }
 });
 
 audio.addEventListener('loadedmetadata', () => { durTime.textContent = fmt(audio.duration); });
@@ -1321,10 +1321,7 @@ function setVol(e) {
   const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
   state.volume = ratio; state.muted = ratio === 0;
   audio.volume = ratio;
-  volFill.style.width = (ratio * 100) + '%';
-  volThumb.style.left = (ratio * 100) + '%';
-  volBar.setAttribute('aria-valuenow', Math.round(ratio * 100));
-  updateVolIcon();
+  updateVolBarUI();
   saveSettings();
 }
 volBar.addEventListener('mousedown', e => { state.volDrag = true; setVol(e); });
@@ -1442,12 +1439,38 @@ document.addEventListener('keydown', e => {
       await setupTrayListeners();
       await setupDragDrop();
 
+      initUpdater(isTauri);
+
       await tauriEvent.listen('file-open', async (event) => {
         handleFileOpen(event.payload);
       });
 
+      await tauriEvent.listen('deep-link', (event) => {
+        handleDeepLink(event.payload);
+      });
+
       const initialArgs = await invoke('get_initial_args');
       handleFileOpen(initialArgs);
+      handleDeepLink(initialArgs);
+
+      function handleDeepLink(urls) {
+        if (!urls) return;
+        console.log("Deep link received:", urls);
+        const urlList = Array.isArray(urls) ? urls : [urls];
+        urlList.forEach(url => {
+          if (!url || typeof url !== 'string') return;
+          const lowerUrl = url.toLowerCase().replace(/\/$/, '');
+          console.log("Processing URL:", lowerUrl);
+
+          if (lowerUrl.includes('audion://settings') || lowerUrl.startsWith('audion:settings')) {
+            console.log("Matched settings link");
+            btnSettings?.click();
+          } else if (lowerUrl.includes('audion://report') || lowerUrl.startsWith('audion:report')) {
+            console.log("Matched report link");
+            btnReportBug?.click();
+          }
+        });
+      }
 
       async function handleFileOpen(paths) {
         if (Array.isArray(paths) && paths.length > 0) {

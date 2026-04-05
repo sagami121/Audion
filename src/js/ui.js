@@ -47,22 +47,10 @@ export function updateTrackUI(track) {
     artImg.style.display = 'block';
     artDefault.style.display = 'none';
 
-    artImg.onload = async () => {
-      const color = await getDominantColor(artImg);
-      if (color) {
-        const root = document.documentElement;
-        const mainRgb = `rgb(${color.r}, ${color.g}, ${color.b})`;
-        const light = lightenColor(color, 1.4);
-        const lightRgb = `rgb(${light.r}, ${light.g}, ${light.b})`;
-        const glow = `rgba(${color.r}, ${color.g}, ${color.b}, 0.6)`;
-
-        root.style.setProperty('--accent-color', mainRgb);
-        root.style.setProperty('--glow-color', glow);
-        setVisualizerColors(mainRgb, lightRgb);
-      } else {
-        resetThemeColors();
-      }
+    artImg.onload = () => {
+      // Color adaptation removed
     };
+    resetThemeColors();
   } else {
     artImg.style.display = 'none';
     artDefault.style.display = 'flex';

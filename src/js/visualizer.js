@@ -87,12 +87,8 @@ export function updateCompSettings(settings, enabled) {
     compressor.release.setTargetAtTime(release, time, 0.05);
     makeupGain.gain.setTargetAtTime(Math.pow(10, makeup / 20), time, 0.05);
   } else {
-    // Default/Bypass
-    compressor.threshold.setTargetAtTime(-24, time, 0.05);
-    compressor.knee.setTargetAtTime(30, time, 0.05);
-    compressor.ratio.setTargetAtTime(1, time, 0.05); // Ratio 1:1 is bypass
-    compressor.attack.setTargetAtTime(0.003, time, 0.05);
-    compressor.release.setTargetAtTime(0.25, time, 0.05);
+    // Default/Bypass: setting ratio to 1 effectively disables compression
+    compressor.ratio.setTargetAtTime(1, time, 0.05);
     makeupGain.gain.setTargetAtTime(1, time, 0.05);
   }
 }
