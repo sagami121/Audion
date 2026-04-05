@@ -27,6 +27,10 @@
     "global-shortcut:allow-unregister",
     "opener:default",
     "opener:allow-open-url",
+    "process:allow-restart",
+    "process:allow-exit",
+    "core:path:default",
+    "shell:allow-execute",
     "core:app:allow-version",
     "core:app:allow-name",
     "dialog:default",
@@ -36,6 +40,8 @@
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
     {
       "identifier": "fs:scope",
       "allow": [
