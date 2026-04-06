@@ -46,12 +46,12 @@
     </p>
 ---
 
-## セットアップ (Setup)
+## セットアップ
 
 ### 開発環境の準備
-1.  [Rust](https://www.rust-lang.org/ja/tools/install) をインストール。
-2.  [Node.js](https://nodejs.org/) をインストール。
-3.  プロジェクトをクローンまたはダウンロード。
+1.  [Rust](https://www.rust-lang.org/ja/tools/install) をインストール
+2.  [Node.js](https://nodejs.org/) をインストール
+3.  プロジェクトをクローンまたはダウンロード
 
 ### 実行・ビルド
 ```bash
