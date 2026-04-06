@@ -39,18 +39,11 @@
           "audion"
         ]
       }
-    },
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3QkVENEIyNzUzNDRCNUMKUldSY1N6UjFzdFMrRi8wdmNxR1kvdTRKclY3Um83N3NiQTA4RmFmRVdnZFdub3NuR09DNVNsSUQK",
-      "endpoints": [
-        "https://github.com/sagami121/Audion/releases/latest/download/latest.json"
-      ]
     }
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": true,
-    "shortDescription": "Audion — Music Player",
+    "shortDescription": "Audion Music Player",
     "targets": "all",
     "icon": [
       "icons/32x32.png",

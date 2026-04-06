@@ -304,7 +304,6 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // Filter music files for file-open (skip the first arg which is usually the exe path)
             let music_files: Vec<String> = args.iter().skip(1).filter(|a| !a.starts_with("audion://")).cloned().collect();

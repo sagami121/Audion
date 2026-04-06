@@ -40,8 +40,6 @@
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
-    "updater:allow-check",
-    "updater:allow-download-and-install",
     {
       "identifier": "fs:scope",
       "allow": [
