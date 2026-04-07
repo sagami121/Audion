@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import settingsIcon from './assets/settings.png';
+import effectsIcon from './assets/audioeffects.png';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -23,31 +25,32 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className="titlebar" data-tauri-drag-region>
+      <div className="titlebar">
+        <div className="titlebar-drag-region" data-tauri-drag-region></div>
         <div className="titlebar-logo">
           ▶ Audion
         </div>
-        <div className="titlebar-controls" style={{ pointerEvents: 'auto' }}>
-          <button className="tb-btn tb-mini" id="btnMiniMode" title="ミニプレイヤー" style={{ pointerEvents: 'auto' }}>
+        <div className="titlebar-controls">
+          <button className="tb-btn tb-mini" id="btnMiniMode" title="ミニプレイヤー">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
               <rect x="2" y="4" width="12" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" />
               <path d="M9 7l2 2-2 2" stroke="currentColor" strokeWidth="1.5" />
             </svg>
           </button>
-          <button className="tb-btn tb-settings" id="btnSettings" title="設定" style={{ pointerEvents: 'auto' }}>
-            <img src="/src/assets/settings.png" alt="Settings" width="16" height="16" style={{ filter: 'brightness(0) invert(0.8)' }} />
+          <button className="tb-btn tb-settings" id="btnSettings" title="設定">
+            <img src={settingsIcon} alt="Settings" width="16" height="16" style={{ filter: 'brightness(0) invert(0.8)' }} />
           </button>
-          <button className="tb-btn tb-min" id="tbMin" title="最小化" style={{ pointerEvents: 'auto' }}>
+          <button className="tb-btn tb-min" id="tbMin" title="最小化">
             <svg width="10" height="1" viewBox="0 0 10 1">
               <rect width="10" height="1" fill="currentColor" />
             </svg>
           </button>
-          <button className="tb-btn tb-max" id="tbMax" title="最大化" style={{ pointerEvents: 'auto' }}>
+          <button className="tb-btn tb-max" id="tbMax" title="最大化">
             <svg width="9" height="9" viewBox="0 0 9 9">
               <rect x="0.5" y="0.5" width="8" height="8" stroke="currentColor" fill="none" />
             </svg>
           </button>
-          <button className="tb-btn tb-close" id="tbClose" title="閉じる" style={{ pointerEvents: 'auto' }}>
+          <button className="tb-btn tb-close" id="tbClose" title="閉じる">
             <svg width="10" height="10" viewBox="0 0 10 10">
               <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
@@ -278,7 +281,7 @@ const App: React.FC = () => {
               <span className="repeat-badge" id="repeatBadge" style={{ display: 'none' }}>1</span>
             </button>
             <button className="ctrl-icon" id="btnShowEq" title="オーディオエフェクト" data-i18n-title="audioeffects">
-              <img src="/src/assets/audioeffects.png" alt="Audio Effects" width="18" height="18" style={{ filter: 'brightness(0) invert(0.8)' }} />
+              <img src={effectsIcon} alt="Audio Effects" width="18" height="18" style={{ filter: 'brightness(0) invert(0.8)' }} />
             </button>
           </div>
 

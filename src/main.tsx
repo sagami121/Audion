@@ -8,6 +8,7 @@ import { translations } from './ts/translations';
 import { CONFIG } from './ts/config';
 import { initVisualizer, updateEqGains, updateCompSettings } from './ts/visualizer';
 import { initUpdater } from './ts/update';
+import muteIcon from './assets/mute.png';
 
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -17,10 +18,13 @@ import { readDir as readDirectoryRaw } from '@tauri-apps/plugin-fs';
 import { register as registerShortcut, unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { LogicalSize, PhysicalSize } from '@tauri-apps/api/dpi';
 
-const isTauri = !!(window as any).__TAURI__;
+const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI__ || !!(window as any).__TAURI_METADATA__);
 
 // DOM variables (to be initialized after React mount)
 let audio: HTMLAudioElement | null = null;
+let playBtn: HTMLButtonElement | null = null;
+let prevBtn: HTMLButtonElement | null = null;
+let nextBtn: HTMLButtonElement | null = null;
 let shuffleBtn: HTMLButtonElement | null = null;
 let repeatBtn: HTMLButtonElement | null = null;
 let repeatBadge: HTMLSpanElement | null = null;
@@ -173,6 +177,7 @@ function updateLanguage(lang: string) {
   if (langSelect) langSelect.value = lang;
   saveSettings();
   updateCount();
+  populatePresetSelect();
 }
 
 function setSpeed(val: number) {
@@ -228,13 +233,13 @@ function updateCompValuesUI() {
 }
 
 function updateVolBarUI() {
-  if (!volFill || !volThumb || !volBar) return;
+  if (!volFill || !volThumb || !volBar || !volLbl) return;
   const ratio = state.muted ? 0 : state.volume;
-  const pct = Math.round(ratio * 100);
+  const pct = ratio * 100;
   volFill.style.width = pct + '%';
   volThumb.style.left = pct + '%';
-  volBar.setAttribute('aria-valuenow', pct.toString());
-  if (volLbl) volLbl.textContent = pct + '%';
+  volBar.setAttribute('aria-valuenow', Math.round(pct).toString());
+  volLbl.textContent = Math.round(pct) + '%';
   updateVolIcon();
 }
 
@@ -600,6 +605,13 @@ async function loadPlaylist() {
     makeup: 0
   };
 
+  if (settings.volume !== undefined) {
+    state.volume = settings.volume;
+    if (audio) audio.volume = state.volume;
+  }
+  if (settings.muted !== undefined) state.muted = settings.muted;
+  updateVolBarUI();
+
   updateEqUI();
 
   const savedW = localStorage.getItem('af_sidebar_w');
@@ -628,11 +640,12 @@ function saveSettings() {
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
 
+
 function updateVolIcon() {
   if (!volIcon) return;
   const v = state.muted ? 0 : state.volume;
   if (v === 0) {
-    volIcon.innerHTML = `<img src="assets/mute.png" width="18" height="18" style="filter: brightness(0) invert(0.8); display: block;">`;
+    volIcon.innerHTML = `<img src="${muteIcon}" width="18" height="18" style="filter: brightness(0) invert(0.8); display: block;">`;
   } else if (v < 0.3) {
     volIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>
@@ -677,6 +690,7 @@ function setVol(e: MouseEvent) {
   saveSettings();
 }
 
+
 let windowShown = false;
 const showApp = async (): Promise<void> => {
   if (windowShown) return;
@@ -690,6 +704,7 @@ const showApp = async (): Promise<void> => {
 };
 
 function setupLegacyLogic() {
+  console.log("Setting up legacy logic...");
   const appWindow = getCurrentWebviewWindow();
 
   tbMin?.addEventListener('click', () => appWindow.minimize());
@@ -893,6 +908,18 @@ function setupLegacyLogic() {
   btnMiniMode?.addEventListener('click', () => {
     toggleMiniMode();
   });
+  
+  playBtn?.addEventListener('click', () => {
+    togglePlay();
+  });
+  
+  prevBtn?.addEventListener('click', () => {
+    playPrev();
+  });
+  
+  nextBtn?.addEventListener('click', () => {
+    playNext();
+  });
 
   speedSlider?.addEventListener('input', (e: Event) => {
     const val = parseFloat((e.target as HTMLInputElement).value);
@@ -1011,6 +1038,41 @@ function setupLegacyLogic() {
     slider.addEventListener('change', () => {
       saveSettings();
     });
+  });
+
+  compThreshold?.addEventListener('input', (e: Event) => {
+    state.compSettings.threshold = parseFloat((e.target as HTMLInputElement).value);
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  compKnee?.addEventListener('input', (e: Event) => {
+    state.compSettings.knee = parseFloat((e.target as HTMLInputElement).value);
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  compRatio?.addEventListener('input', (e: Event) => {
+    state.compSettings.ratio = parseFloat((e.target as HTMLInputElement).value);
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  compAttack?.addEventListener('input', (e: Event) => {
+    state.compSettings.attack = parseFloat((e.target as HTMLInputElement).value);
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  compRelease?.addEventListener('input', (e: Event) => {
+    state.compSettings.release = parseFloat((e.target as HTMLInputElement).value);
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+  compMakeup?.addEventListener('input', (e: Event) => {
+    state.compSettings.makeup = parseFloat((e.target as HTMLInputElement).value);
+    updateCompValuesUI();
+    updateCompSettings(state.compSettings, state.compEnabled);
+  });
+
+  [compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach(el => {
+    el?.addEventListener('change', () => saveSettings());
   });
 
   btnSavePlaylist?.addEventListener('click', async () => {
@@ -1270,12 +1332,28 @@ if (rootEl) {
 
 // Legacy initialization logic
 (async () => {
+  console.log("Initialization started...");
+  if (isTauri) {
+    try {
+      const win = getCurrentWebviewWindow();
+      await win.show();
+      windowShown = true;
+      console.log("Window shown.");
+    } catch (e) {
+      console.error("Failed to show window at start:", e);
+    }
+  }
+
   try {
     // Wait for React to render elements
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 50));
+    console.log("DOM elements should be ready.");
 
     // Initialize top-level variables after elements are in the DOM
     audio = document.getElementById('audio') as HTMLAudioElement | null;
+    playBtn = document.getElementById('playBtn') as HTMLButtonElement | null;
+    prevBtn = document.getElementById('prevBtn') as HTMLButtonElement | null;
+    nextBtn = document.getElementById('nextBtn') as HTMLButtonElement | null;
     shuffleBtn = document.getElementById('shuffleBtn') as HTMLButtonElement | null;
     repeatBtn = document.getElementById('repeatBtn') as HTMLButtonElement | null;
     repeatBadge = document.getElementById('repeatBadge') as HTMLSpanElement | null;

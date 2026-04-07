@@ -81,7 +81,13 @@ body {
   z-index: 9999;
   padding: 0 0 0 12px;
   transition: background-color var(--transition), border-color var(--transition);
-  pointer-events: auto;
+  overflow: hidden;
+}
+
+.titlebar-drag-region {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 .titlebar-logo {
@@ -92,6 +98,8 @@ body {
   font-weight: 700;
   color: var(--text);
   pointer-events: none;
+  position: relative;
+  z-index: 1;
 }
 
 .titlebar-controls {
@@ -99,6 +107,8 @@ body {
   align-items: center;
   height: var(--titlebar-h);
   pointer-events: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .tb-btn {
