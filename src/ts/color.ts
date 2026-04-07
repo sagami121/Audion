@@ -1,12 +1,18 @@
-const canvas = document.getElementById('colorCanvas');
+const canvas = document.getElementById('colorCanvas') as HTMLCanvasElement | null;
 const ctx = canvas ? canvas.getContext('2d', { willReadFrequently: true }) : null;
+
+export interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
 
 /**
  * 
  * @param {HTMLImageElement} img 
- * @returns {Promise<{r: number, g: number, b: number} | null>}
+ * @returns {Promise<RGB | null>}
  */
-export async function getDominantColor(img) {
+export async function getDominantColor(img: HTMLImageElement): Promise<RGB | null> {
   if (!canvas || !ctx || !img || !img.complete || img.naturalWidth === 0) return null;
 
   try {
@@ -51,15 +57,13 @@ export async function getDominantColor(img) {
   }
 }
 
-function boostSaturation(r, g, b) {
+function boostSaturation(r: number, g: number, b: number): RGB {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
+  let h = 0, s = 0, l = (max + min) / 2;
 
-  if (max === min) {
-    h = s = 0;
-  } else {
+  if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
@@ -77,7 +81,7 @@ function boostSaturation(r, g, b) {
   if (s === 0) {
     finalR = finalG = finalB = l;
   } else {
-    const hue2rgb = (p, q, t) => {
+    const hue2rgb = (p: number, q: number, t: number) => {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
       if (t < 1 / 6) return p + (q - p) * 6 * t;
@@ -99,7 +103,7 @@ function boostSaturation(r, g, b) {
   };
 }
 
-export function lightenColor(c, factor = 1.3) {
+export function lightenColor(c: RGB, factor = 1.3): RGB {
   return {
     r: Math.min(255, Math.floor(c.r * factor)),
     g: Math.min(255, Math.floor(c.g * factor)),

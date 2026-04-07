@@ -1,4 +1,4 @@
-export function fmt(s) {
+export function fmt(s: number): string {
   if (!s || isNaN(s)) return '0:00';
   const hrs = Math.floor(s / 3600);
   const min = Math.floor((s % 3600) / 60);
@@ -9,15 +9,17 @@ export function fmt(s) {
   return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
-export function esc(s) {
+export function esc(s: string | number): string {
   return s.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-let toastTimer;
-export function showToast(msg, ms = 2500) {
+
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+export function showToast(msg: string, ms = 2500): void {
   const toast = document.getElementById('toast');
   if (!toast) return;
   toast.textContent = msg;
   toast.classList.add('show');
-  clearTimeout(toastTimer);
+  if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
 }

@@ -1,6 +1,9 @@
-const saved = JSON.parse(localStorage.getItem('af_settings') || '{}');
+import { AppState } from '../types';
 
-export const state = {
+const savedStr = localStorage.getItem('af_settings');
+const saved = savedStr ? JSON.parse(savedStr) : {};
+
+export const state: AppState = {
   tracks: [],
   current: -1,
   playing: false,
@@ -19,10 +22,10 @@ export const state = {
   version: '0.0.0',
   lyrics: [],
   currentLyricIndex: -1,
-  eqEnabled: false,
-  eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 10-band EQ
-  compEnabled: false,
-  compSettings: {
+  eqEnabled: saved.eqEnabled || false,
+  eqGains: saved.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  compEnabled: saved.compEnabled || false,
+  compSettings: saved.compSettings || {
     threshold: -24,
     knee: 30,
     ratio: 12,
@@ -32,7 +35,7 @@ export const state = {
   },
   restoreSession: true,
   sidebarWidth: 270,
-  showLyrics: false,
+  showLyrics: saved.showLyrics !== undefined ? saved.showLyrics : false,
   eqPresets: {
     bass: [6, 5, 3, 1, 0, -1, -2, -3, -4, -5],
     reggae: [3, 2, 1, 0, 0, -1, -2, -3, -3, -2],

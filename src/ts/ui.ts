@@ -1,32 +1,33 @@
 import { state } from './state.js';
 import { fmt, esc } from './utils.js';
-import { getDominantColor, lightenColor } from './color.js';
 import { setVisualizerColors } from './visualizer.js';
+import { Track } from '../types';
 
-export function updateActive(playlistEl) {
+export function updateActive(playlistEl: HTMLElement | null): void {
   if (!playlistEl) return;
-  Array.from(playlistEl.children).forEach((li, i) => {
-    const idx = parseInt(li.dataset.index);
+  Array.from(playlistEl.children).forEach((child) => {
+    const li = child as HTMLElement;
+    const idx = parseInt(li.dataset.index || '-1');
     li.classList.toggle('active', idx === state.current);
     li.classList.toggle('paused', idx === state.current && !state.playing);
     li.setAttribute('aria-selected', idx === state.current ? 'true' : 'false');
   });
 }
 
-export function updatePlayUI(playing) {
+export function updatePlayUI(playing: boolean): void {
   const playBtn = document.getElementById('playBtn');
   if (!playBtn) return;
-  const icPlay = playBtn.querySelector('.ic-play');
-  const icPause = playBtn.querySelector('.ic-pause');
+  const icPlay = playBtn.querySelector('.ic-play') as HTMLElement | null;
+  const icPause = playBtn.querySelector('.ic-pause') as HTMLElement | null;
   if (icPlay) icPlay.style.display = playing ? 'none' : 'block';
   if (icPause) icPause.style.display = playing ? 'block' : 'none';
   playBtn.classList.toggle('playing', playing);
 }
 
-export function updateTrackUI(track) {
+export function updateTrackUI(track: Track): void {
   const trackTitle = document.getElementById('trackTitle');
   const trackSub = document.getElementById('trackSub');
-  const artImg = document.getElementById('artImg');
+  const artImg = document.getElementById('artImg') as HTMLImageElement | null;
   const artDefault = document.getElementById('artDefault');
 
   if (!trackTitle || !trackSub) return;
@@ -43,26 +44,25 @@ export function updateTrackUI(track) {
   trackSub.textContent = subText;
 
   if (track.cover) {
-    artImg.src = track.cover;
-    artImg.style.display = 'block';
-    artDefault.style.display = 'none';
+    if (artImg) {
+      artImg.src = track.cover;
+      artImg.style.display = 'block';
+    }
+    if (artDefault) artDefault.style.display = 'none';
 
-    artImg.onload = () => {
-      // Color adaptation removed
-    };
     resetThemeColors();
   } else {
-    artImg.style.display = 'none';
-    artDefault.style.display = 'flex';
+    if (artImg) artImg.style.display = 'none';
+    if (artDefault) artDefault.style.display = 'flex';
     resetThemeColors();
   }
 
   setTimeout(() => {
     const wrap = trackTitle.parentElement;
-    if (trackTitle.scrollWidth > wrap.clientWidth + 2) trackTitle.classList.add('marquee');
+    if (wrap && trackTitle.scrollWidth > wrap.clientWidth + 2) trackTitle.classList.add('marquee');
 
     trackTitle.querySelectorAll('.pl-badge').forEach(b => b.remove());
-    const ext = track.path.split('.').pop().toUpperCase();
+    const ext = track.path.split('.').pop()?.toUpperCase();
     if (ext && ext.length < 5) {
       const badge = document.createElement('span');
       badge.className = 'pl-badge';
@@ -72,11 +72,15 @@ export function updateTrackUI(track) {
   }, 80);
 }
 
-export function createPlaylistRow(index, track, onRowClick) {
+export function createPlaylistRow(
+  index: number,
+  track: Track,
+  onRowClick: (e: MouseEvent, index: number) => void
+): HTMLLIElement {
   const li = document.createElement('li');
   li.className = 'pl-item';
   li.setAttribute('role', 'option');
-  li.dataset.index = index;
+  li.dataset.index = index.toString();
 
   const displayName = track.name;
   const displaySub = track.artist ? track.artist : '';
@@ -89,7 +93,7 @@ export function createPlaylistRow(index, track, onRowClick) {
     <div class="pl-info">
       <span class="pl-name" title="${esc(displayName)}">
         ${esc(displayName)}
-        <span class="pl-badge">${esc(track.path.split('.').pop().toUpperCase())}</span>
+        <span class="pl-badge">${esc(track.path.split('.').pop()?.toUpperCase() || '')}</span>
       </span>
       ${displaySub ? `<span class="pl-sub">${esc(displaySub)}</span>` : ''}
     </div>
@@ -104,7 +108,12 @@ export function createPlaylistRow(index, track, onRowClick) {
   return li;
 }
 
-export function renderPlaylist(playlistEl, tracks, onRowClick, filter = '') {
+export function renderPlaylist(
+  playlistEl: HTMLElement | null,
+  tracks: Track[],
+  onRowClick: (e: MouseEvent, index: number) => void,
+  filter = ''
+): void {
   if (!playlistEl) return;
   playlistEl.innerHTML = '';
   tracks.forEach((track, i) => {
@@ -118,7 +127,7 @@ export function renderPlaylist(playlistEl, tracks, onRowClick, filter = '') {
   updateActive(playlistEl);
 }
 
-function resetThemeColors() {
+function resetThemeColors(): void {
   const root = document.documentElement;
   root.style.removeProperty('--accent-color');
   root.style.removeProperty('--glow-color');

@@ -2,10 +2,21 @@ import { state } from './state.js';
 import { showToast } from './utils.js';
 import { translations } from './translations.js';
 
-const GITHUB_OWNER = 'sagami121';
-const GITHUB_REPO = 'Audion';
-const invoke = window.__TAURI__?.core?.invoke;
-export async function initUpdater(isTauri) {
+interface ReleaseAsset {
+  name: string;
+  browser_download_url: string;
+}
+
+interface ReleaseInfo {
+  tag_name: string;
+  body: string;
+  assets: ReleaseAsset[];
+}
+
+import { invoke } from '@tauri-apps/api/core';
+import { exit } from '@tauri-apps/plugin-process';
+
+export async function initUpdater(isTauri: boolean): Promise<void> {
   if (!isTauri || !invoke) return;
 
   const btnCheckUpdate = document.getElementById('btnCheckUpdate');
@@ -17,7 +28,7 @@ export async function initUpdater(isTauri) {
   setupModalEvents();
 }
 
-function setupModalEvents() {
+function setupModalEvents(): void {
   const releaseNotesModal = document.getElementById('releaseNotesModal');
   const btnCloseReleaseNotes = document.getElementById('btnCloseReleaseNotes');
   const btnReleaseNotesOk = document.getElementById('btnReleaseNotesOk');
@@ -35,7 +46,7 @@ function setupModalEvents() {
   }
 }
 
-async function checkUpdate(manual = false) {
+async function checkUpdate(manual = false): Promise<void> {
   const dict = translations[state.lang] || translations.ja;
   if (manual) showToast(dict.toast_update_checking || 'Checking for updates...');
 
@@ -57,7 +68,7 @@ async function checkUpdate(manual = false) {
   }
 }
 
-async function fetchLatestRelease() {
+async function fetchLatestRelease(): Promise<ReleaseInfo> {
   if (!invoke) {
     throw new Error('Tauri invoke unavailable');
   }
@@ -65,11 +76,11 @@ async function fetchLatestRelease() {
   return invoke('fetch_latest_release_info');
 }
 
-function normalizeVersion(version) {
+function normalizeVersion(version: string): string {
   return String(version || '').trim().replace(/^v/i, '');
 }
 
-function isNewerVersion(current, latest) {
+function isNewerVersion(current: string, latest: string): boolean {
   const currentParts = current.split('.').map(Number);
   const latestParts = latest.split('.').map(Number);
 
@@ -83,7 +94,7 @@ function isNewerVersion(current, latest) {
   return false;
 }
 
-function showUpdateToast(releaseInfo) {
+function showUpdateToast(releaseInfo: ReleaseInfo): void {
   const updateToast = document.getElementById('updateToast');
   const btnUpdateNow = document.getElementById('btnUpdateNow');
   const btnUpdateLater = document.getElementById('btnUpdateLater');
@@ -129,7 +140,7 @@ function showUpdateToast(releaseInfo) {
   }
 }
 
-function findInstallerAsset(releaseInfo) {
+function findInstallerAsset(releaseInfo: ReleaseInfo): ReleaseAsset | null {
   const version = normalizeVersion(releaseInfo.tag_name);
   const expectedNames = [
     `Audion_${version}_x64_ja-JP.msi`,
@@ -139,7 +150,7 @@ function findInstallerAsset(releaseInfo) {
   return releaseInfo.assets?.find((asset) => expectedNames.includes(asset.name)) || null;
 }
 
-async function downloadAndInstall(releaseInfo) {
+async function downloadAndInstall(releaseInfo: ReleaseInfo): Promise<void> {
   const dict = translations[state.lang] || translations.ja;
   const installerAsset = findInstallerAsset(releaseInfo);
 
@@ -161,14 +172,9 @@ async function downloadAndInstall(releaseInfo) {
 
   await invoke('run_installer', { path: tempPath });
 
-  const processPlugin = window.__TAURI__?.process || window.__TAURI__?.plugins?.process;
   setTimeout(async () => {
     try {
-      if (processPlugin?.exit) {
-        await processPlugin.exit(0);
-      } else {
-        window.close();
-      }
+      await exit(0);
     } catch (error) {
       console.warn('App exit after installer launch failed:', error);
       window.close();
@@ -176,7 +182,7 @@ async function downloadAndInstall(releaseInfo) {
   }, 1500);
 }
 
-function formatUpdaterError(error) {
+function formatUpdaterError(error: any): string {
   const raw = String(error?.message || error || '').trim();
   const normalized = raw.toLowerCase();
 

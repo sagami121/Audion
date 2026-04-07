@@ -1,17 +1,15 @@
 import { state } from './state.js';
-import { fmt, showToast } from './utils.js';
+import { showToast } from './utils.js';
 import { updateActive, updatePlayUI } from './ui.js';
 import { startVisualizer, stopVisualizer } from './visualizer.js';
 import { translations } from './translations.js';
 
-const convertFileSrc = window.__TAURI__?.core?.convertFileSrc ?? ((s) => s);
-
-export function savePlaylist() {
+export function savePlaylist(): void {
   const paths = state.tracks.map(t => t.path);
   localStorage.setItem('af_playlist', JSON.stringify(paths));
 }
 
-export function buildShuffleOrder() {
+export function buildShuffleOrder(): void {
   const arr = state.tracks.map((_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -22,7 +20,13 @@ export function buildShuffleOrder() {
   state.shuffleOrder = arr;
 }
 
-export function playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl) {
+export function playAudio(
+  audio: HTMLAudioElement,
+  albumArt: HTMLElement | null,
+  vinylCenter: HTMLElement | null,
+  artGlow: HTMLElement | null,
+  playlistEl: HTMLElement | null
+): void {
   audio.volume = state.muted ? 0 : state.volume;
   audio.play().then(() => {
     state.playing = true;
@@ -42,7 +46,11 @@ export function playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl) {
   });
 }
 
-export function pauseAudio(audio, albumArt, playlistEl) {
+export function pauseAudio(
+  audio: HTMLAudioElement,
+  albumArt: HTMLElement | null,
+  playlistEl: HTMLElement | null
+): void {
   audio.pause();
   state.playing = false;
   updatePlayUI(false);
@@ -52,4 +60,3 @@ export function pauseAudio(audio, albumArt, playlistEl) {
   updateActive(playlistEl);
   stopVisualizer();
 }
-

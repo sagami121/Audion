@@ -1,23 +1,25 @@
-let audioCtx = null;
-let analyser = null;
-let source = null;
-let compressor = null;
-let makeupGain = null;
-let dataArray = null;
-let bufferLength = null;
-let canvas = null;
-let ctx = null;
-let animationId = null;
+import { CompSettings } from '../types';
+
+let audioCtx: AudioContext | null = null;
+let analyser: AnalyserNode | null = null;
+let source: MediaElementAudioSourceNode | null = null;
+let compressor: DynamicsCompressorNode | null = null;
+let makeupGain: GainNode | null = null;
+let dataArray: Uint8Array | null = null;
+let bufferLength: number | null = null;
+let canvas: HTMLCanvasElement | null = null;
+let ctx: CanvasRenderingContext2D | null = null;
+let animationId: number | null = null;
 let isVisualizing = false;
 
 let primaryColor = '#a78bfa';
 let secondaryColor = '#38bdf8';
 
-let filters = [];
+let filters: BiquadFilterNode[] = [];
 const FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
-export function initVisualizer(audioElement) {
-  canvas = document.getElementById('visualizerCanvas');
+export function initVisualizer(audioElement: HTMLAudioElement): void {
+  canvas = document.getElementById('visualizerCanvas') as HTMLCanvasElement | null;
   if (!canvas) return;
   ctx = canvas.getContext('2d');
 
@@ -25,16 +27,17 @@ export function initVisualizer(audioElement) {
   window.addEventListener('resize', resizeCanvas);
 
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!audioCtx) {
-      audioCtx = new AudioContext();
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!audioCtx && AudioContextClass) {
+      audioCtx = new AudioContextClass();
+      if (!audioCtx) return;
       analyser = audioCtx.createAnalyser();
 
       source = audioCtx.createMediaElementSource(audioElement);
       
       // Create EQ filters
       filters = FREQUENCIES.map(freq => {
-        const filter = audioCtx.createBiquadFilter();
+        const filter = audioCtx!.createBiquadFilter();
         filter.type = 'peaking';
         filter.frequency.value = freq;
         filter.Q.value = 1;
@@ -47,7 +50,7 @@ export function initVisualizer(audioElement) {
       makeupGain = audioCtx.createGain();
 
       // Connect: Source -> Filter0 -> ... -> Filter9 -> Compressor -> MakeupGain -> Analyser -> Destination
-      let lastNode = source;
+      let lastNode: AudioNode = source;
       filters.forEach(filter => {
         lastNode.connect(filter);
         lastNode = filter;
@@ -66,15 +69,15 @@ export function initVisualizer(audioElement) {
   }
 }
 
-export function updateEqGains(gains, enabled) {
-  if (!filters.length) return;
+export function updateEqGains(gains: number[], enabled: boolean): void {
+  if (!filters.length || !audioCtx) return;
   filters.forEach((filter, i) => {
-    filter.gain.setTargetAtTime(enabled ? gains[i] : 0, audioCtx.currentTime, 0.05);
+    filter.gain.setTargetAtTime(enabled ? gains[i] : 0, audioCtx!.currentTime, 0.05);
   });
 }
 
-export function updateCompSettings(settings, enabled) {
-  if (!compressor || !makeupGain) return;
+export function updateCompSettings(settings: CompSettings, enabled: boolean): void {
+  if (!compressor || !makeupGain || !audioCtx) return;
 
   const { threshold, knee, ratio, attack, release, makeup } = settings;
   const time = audioCtx.currentTime;
@@ -93,16 +96,17 @@ export function updateCompSettings(settings, enabled) {
   }
 }
 
-function resizeCanvas() {
+function resizeCanvas(): void {
   if (!canvas) return;
   const parent = canvas.parentElement;
+  if (!parent) return;
   canvas.width = parent.clientWidth * 1.5;
   canvas.height = parent.clientHeight * 1.5;
   canvas.style.width = '100%';
   canvas.style.height = '100%';
 }
 
-export function startVisualizer() {
+export function startVisualizer(): void {
   if (!audioCtx || !canvas || isVisualizing) return;
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
@@ -111,7 +115,7 @@ export function startVisualizer() {
   draw();
 }
 
-export function stopVisualizer() {
+export function stopVisualizer(): void {
   isVisualizing = false;
   if (animationId) {
     cancelAnimationFrame(animationId);
@@ -122,19 +126,19 @@ export function stopVisualizer() {
   }
 }
 
-export function setVisualizerColors(primary, secondary) {
+export function setVisualizerColors(primary: string, secondary: string): void {
   primaryColor = primary;
   secondaryColor = secondary;
 }
 
-function draw() {
+function draw(): void {
   if (!isVisualizing) return;
 
   animationId = requestAnimationFrame(draw);
 
-  if (!analyser || !ctx || !canvas) return;
+  if (!analyser || !ctx || !canvas || !dataArray || !bufferLength) return;
 
-  analyser.getByteFrequencyData(dataArray);
+  analyser.getByteFrequencyData(dataArray as any);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -143,7 +147,6 @@ function draw() {
   const radius = Math.min(centerX, centerY) * 0.55;
 
   const bars = bufferLength;
-  const angleStep = (Math.PI * 2) / bars;
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
   gradient.addColorStop(0, primaryColor);
   gradient.addColorStop(1, secondaryColor);

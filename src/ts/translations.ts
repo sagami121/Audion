@@ -1,4 +1,12 @@
-export const translations = {
+export interface TranslationContent {
+  [key: string]: string;
+}
+
+export interface Translations {
+  [lang: string]: TranslationContent;
+}
+
+export const translations: Translations = {
   ja: {
     app_title: "Audion — 音楽プレイヤー",
     add_file: "ファイル",
