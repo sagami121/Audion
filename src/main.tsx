@@ -34,6 +34,7 @@ let seeker: HTMLDivElement | null = null;
 let seekFill: HTMLDivElement | null = null;
 let seekThumb: HTMLDivElement | null = null;
 let curTime: HTMLSpanElement | null = null;
+let durTime: HTMLSpanElement | null = null;
 let volBar: HTMLDivElement | null = null;
 let volFill: HTMLDivElement | null = null;
 let volThumb: HTMLDivElement | null = null;
@@ -498,6 +499,23 @@ function playPrev() {
   loadTrack(prev, true);
 }
 
+function toggleShuffle() {
+  state.shuffle = !state.shuffle;
+  if (state.shuffle) player.buildShuffleOrder();
+  if (shuffleBtn) shuffleBtn.classList.toggle('active', state.shuffle);
+  saveSettings();
+}
+
+function toggleRepeat() {
+  if (state.repeat === 'none') state.repeat = 'all';
+  else if (state.repeat === 'all') state.repeat = 'one';
+  else state.repeat = 'none';
+
+  if (repeatBtn) repeatBtn.classList.toggle('active', state.repeat !== 'none');
+  if (repeatBadge) repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
+  saveSettings();
+}
+
 function populatePresetSelect() {
   if (!eqPresetsSelect) return;
   const el = eqPresetsSelect;
@@ -919,6 +937,14 @@ function setupLegacyLogic() {
   
   nextBtn?.addEventListener('click', () => {
     playNext();
+  });
+
+  shuffleBtn?.addEventListener('click', () => {
+    toggleShuffle();
+  });
+
+  repeatBtn?.addEventListener('click', () => {
+    toggleRepeat();
   });
 
   speedSlider?.addEventListener('input', (e: Event) => {
@@ -1363,6 +1389,7 @@ if (rootEl) {
     seekFill = document.getElementById('seekFill') as HTMLDivElement | null;
     seekThumb = document.getElementById('seekThumb') as HTMLDivElement | null;
     curTime = document.getElementById('curTime') as HTMLSpanElement | null;
+    durTime = document.getElementById('durTime') as HTMLSpanElement | null;
     volBar = document.getElementById('volBar') as HTMLDivElement | null;
     volFill = document.getElementById('volFill') as HTMLDivElement | null;
     volThumb = document.getElementById('volThumb') as HTMLDivElement | null;
@@ -1442,10 +1469,17 @@ if (rootEl) {
 
     if (audio) {
       audio.volume = state.volume;
+      audio.addEventListener('loadedmetadata', () => {
+        if (audio && durTime) durTime.textContent = fmt(audio.duration);
+        if (curTime) curTime.textContent = '0:00';
+        if (seekFill) seekFill.style.width = '0%';
+        if (seekThumb) seekThumb.style.left = '0%';
+      });
+
       audio.addEventListener('timeupdate', () => {
         if (audio) {
           if (!state.seekDrag) {
-            const pct = (audio.currentTime / audio.duration) * 100;
+            const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
             if (seekFill) seekFill.style.width = pct + '%';
             if (seekThumb) seekThumb.style.left = pct + '%';
             if (curTime) curTime.textContent = fmt(audio.currentTime);
