@@ -1,4 +1,4 @@
-use std::fs;
+﻿use std::fs;
 use base64::{Engine as _, engine::general_purpose};
 use lofty::prelude::*;
 use lofty::probe::Probe;
@@ -7,11 +7,309 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use std::sync::Mutex;
 use tauri::{Manager, AppHandle, Emitter, State};
 use serde::Serialize;
+use tauri_plugin_opener::OpenerExt;
 
 struct AppArgs {
     args: Mutex<Vec<String>>,
 }
 
+#[cfg(target_os = "windows")]
+mod windows_taskbar {
+    use image::load_from_memory;
+    use std::ffi::c_void;
+    use std::mem::size_of;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::OnceLock;
+    use tauri::{AppHandle, Emitter, Manager};
+    use windows::core::w;
+    use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+    use windows::Win32::Graphics::Gdi::{
+        CreateBitmap, CreateDIBSection, DeleteObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
+        DIB_RGB_COLORS,
+    };
+    use windows::Win32::System::Com::{
+        CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
+        COINIT_APARTMENTTHREADED,
+    };
+    use windows::Win32::UI::Shell::{
+        DefSubclassProc, ITaskbarList3, SetWindowSubclass, TaskbarList, THB_FLAGS, THB_ICON,
+        THB_TOOLTIP, THBF_ENABLED, THBN_CLICKED, THUMBBUTTON,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        CreateIconIndirect, RegisterWindowMessageW, HICON, ICONINFO, WM_COMMAND,
+    };
+
+    static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+    static TASKBAR_BUTTON_CREATED_MSG: OnceLock<u32> = OnceLock::new();
+    static PREV_ICON: OnceLock<usize> = OnceLock::new();
+    static PLAY_ICON: OnceLock<usize> = OnceLock::new();
+    static PAUSE_ICON: OnceLock<usize> = OnceLock::new();
+    static NEXT_ICON: OnceLock<usize> = OnceLock::new();
+    static IS_PLAYING: AtomicBool = AtomicBool::new(false);
+
+    const SUBCLASS_ID: usize = 0xA0D101;
+    const BTN_PREV: u32 = 41001;
+    const BTN_PLAY_PAUSE: u32 = 41002;
+    const BTN_NEXT: u32 = 41003;
+    const PREV_ICON_PNG: &[u8] = include_bytes!("../icons/taskbar_prev.png");
+    const PLAY_ICON_PNG: &[u8] = include_bytes!("../icons/taskbar_play.png");
+    const PAUSE_ICON_PNG: &[u8] = include_bytes!("../icons/taskbar_pause.png");
+    const NEXT_ICON_PNG: &[u8] = include_bytes!("../icons/taskbar_next.png");
+
+    fn set_tooltip(dest: &mut [u16; 260], text: &str) {
+        let mut utf16: Vec<u16> = text.encode_utf16().collect();
+        if utf16.len() >= dest.len() {
+            utf16.truncate(dest.len() - 1);
+        }
+        for (i, ch) in utf16.iter().enumerate() {
+            dest[i] = *ch;
+        }
+        dest[utf16.len()] = 0;
+    }
+
+    fn make_button(
+        id: u32,
+        icon: windows::Win32::UI::WindowsAndMessaging::HICON,
+        tip: &str,
+    ) -> THUMBBUTTON {
+        let mut button = THUMBBUTTON {
+            dwMask: THB_FLAGS | THB_ICON | THB_TOOLTIP,
+            iId: id,
+            iBitmap: 0,
+            hIcon: icon,
+            szTip: [0; 260],
+            dwFlags: THBF_ENABLED,
+        };
+        set_tooltip(&mut button.szTip, tip);
+        button
+    }
+
+    fn create_hicon_from_png(png: &[u8]) -> Result<HICON, String> {
+        let image = load_from_memory(png).map_err(|e| e.to_string())?.to_rgba8();
+        let (width, height) = image.dimensions();
+        let mut bgra = Vec::with_capacity((width * height * 4) as usize);
+        for p in image.pixels() {
+            let [r, g, b, a] = p.0;
+            bgra.extend_from_slice(&[b, g, r, a]);
+        }
+
+        unsafe {
+            let mut bmi = BITMAPINFO::default();
+            bmi.bmiHeader = BITMAPINFOHEADER {
+                biSize: size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: width as i32,
+                biHeight: -(height as i32),
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            };
+
+            let mut bits: *mut c_void = std::ptr::null_mut();
+            let color = CreateDIBSection(None, &bmi, DIB_RGB_COLORS, &mut bits, None, 0)
+                .map_err(|e| e.to_string())?;
+            if bits.is_null() {
+                return Err("Failed to create icon bitmap".to_string());
+            }
+            std::ptr::copy_nonoverlapping(bgra.as_ptr(), bits as *mut u8, bgra.len());
+
+            let mask = CreateBitmap(width as i32, height as i32, 1, 1, None);
+            if mask.0.is_null() {
+                let _ = DeleteObject(color.into());
+                return Err("Failed to create icon mask".to_string());
+            }
+
+            let icon_info = ICONINFO {
+                fIcon: true.into(),
+                xHotspot: 0,
+                yHotspot: 0,
+                hbmMask: mask,
+                hbmColor: color,
+            };
+            let icon = CreateIconIndirect(&icon_info).map_err(|e| e.to_string())?;
+
+            let _ = DeleteObject(color.into());
+            let _ = DeleteObject(mask.into());
+            Ok(icon)
+        }
+    }
+
+    fn get_prev_icon() -> Result<HICON, String> {
+        if let Some(icon) = PREV_ICON.get() {
+            return Ok(HICON(*icon as *mut c_void));
+        }
+        let icon = create_hicon_from_png(PREV_ICON_PNG)?;
+        let _ = PREV_ICON.set(icon.0 as usize);
+        Ok(HICON(
+            *PREV_ICON.get().expect("prev icon should be initialized") as *mut c_void,
+        ))
+    }
+
+    fn get_play_icon() -> Result<HICON, String> {
+        if let Some(icon) = PLAY_ICON.get() {
+            return Ok(HICON(*icon as *mut c_void));
+        }
+        let icon = create_hicon_from_png(PLAY_ICON_PNG)?;
+        let _ = PLAY_ICON.set(icon.0 as usize);
+        Ok(HICON(
+            *PLAY_ICON.get().expect("play icon should be initialized") as *mut c_void,
+        ))
+    }
+
+    fn get_pause_icon() -> Result<HICON, String> {
+        if let Some(icon) = PAUSE_ICON.get() {
+            return Ok(HICON(*icon as *mut c_void));
+        }
+        let icon = create_hicon_from_png(PAUSE_ICON_PNG)?;
+        let _ = PAUSE_ICON.set(icon.0 as usize);
+        Ok(HICON(
+            *PAUSE_ICON.get().expect("pause icon should be initialized") as *mut c_void,
+        ))
+    }
+
+    fn get_next_icon() -> Result<HICON, String> {
+        if let Some(icon) = NEXT_ICON.get() {
+            return Ok(HICON(*icon as *mut c_void));
+        }
+        let icon = create_hicon_from_png(NEXT_ICON_PNG)?;
+        let _ = NEXT_ICON.set(icon.0 as usize);
+        Ok(HICON(
+            *NEXT_ICON.get().expect("next icon should be initialized") as *mut c_void,
+        ))
+    }
+
+    fn make_buttons() -> Result<[THUMBBUTTON; 3], String> {
+        let prev_icon = get_prev_icon()?;
+        let next_icon = get_next_icon()?;
+        let is_playing = IS_PLAYING.load(Ordering::Relaxed);
+        let middle_icon = if is_playing { get_pause_icon()? } else { get_play_icon()? };
+        let middle_tip = if is_playing { "一時停止" } else { "再生" };
+
+        Ok([
+            make_button(BTN_PREV, prev_icon, "前へ"),
+            make_button(BTN_PLAY_PAUSE, middle_icon, middle_tip),
+            make_button(BTN_NEXT, next_icon, "次へ"),
+        ])
+    }
+
+    fn add_thumbnail_buttons(hwnd: HWND) -> Result<(), String> {
+        unsafe {
+            CoInitializeEx(None, COINIT_APARTMENTTHREADED)
+                .ok()
+                .map_err(|e| e.to_string())?;
+
+            let taskbar: ITaskbarList3 =
+                CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
+                    .map_err(|e| e.to_string())?;
+            taskbar.HrInit().map_err(|e| e.to_string())?;
+
+            let buttons = make_buttons()?;
+
+            taskbar
+                .ThumbBarAddButtons(hwnd, &buttons)
+                .map_err(|e| e.to_string())?;
+            CoUninitialize();
+        }
+
+        Ok(())
+    }
+
+    unsafe extern "system" fn taskbar_subclass_proc(
+        hwnd: HWND,
+        umsg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        _uidsubclass: usize,
+        _dwrefdata: usize,
+    ) -> LRESULT {
+        if let Some(created_msg) = TASKBAR_BUTTON_CREATED_MSG.get() {
+            if umsg == *created_msg {
+                let _ = add_thumbnail_buttons(hwnd);
+            }
+        }
+
+        if umsg == WM_COMMAND {
+            let raw = wparam.0;
+            let code = ((raw >> 16) & 0xFFFF) as u32;
+            let id = (raw & 0xFFFF) as u32;
+            if code == THBN_CLICKED {
+                if let Some(app) = APP_HANDLE.get() {
+                    match id {
+                        BTN_PREV => {
+                            let _ = app.emit("tray-prev", ());
+                        }
+                        BTN_PLAY_PAUSE => {
+                            let _ = app.emit("tray-play-pause", ());
+                        }
+                        BTN_NEXT => {
+                            let _ = app.emit("tray-next", ());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        unsafe { DefSubclassProc(hwnd, umsg, wparam, lparam) }
+    }
+
+    pub fn setup(app: &AppHandle) -> Result<(), String> {
+        let _ = APP_HANDLE.set(app.clone());
+
+        let window = app
+            .get_webview_window("main")
+            .ok_or_else(|| "main window not found".to_string())?;
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+
+        unsafe {
+            let taskbar_created_msg = RegisterWindowMessageW(w!("TaskbarButtonCreated"));
+            let _ = TASKBAR_BUTTON_CREATED_MSG.set(taskbar_created_msg);
+            let _ = SetWindowSubclass(hwnd, Some(taskbar_subclass_proc), SUBCLASS_ID, 0);
+        }
+
+        let _ = add_thumbnail_buttons(hwnd);
+        Ok(())
+    }
+
+    pub fn set_playing(app: &AppHandle, is_playing: bool) -> Result<(), String> {
+        IS_PLAYING.store(is_playing, Ordering::Relaxed);
+        let window = app
+            .get_webview_window("main")
+            .ok_or_else(|| "main window not found".to_string())?;
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+
+        unsafe {
+            CoInitializeEx(None, COINIT_APARTMENTTHREADED)
+                .ok()
+                .map_err(|e| e.to_string())?;
+            let taskbar: ITaskbarList3 =
+                CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
+                    .map_err(|e| e.to_string())?;
+            taskbar.HrInit().map_err(|e| e.to_string())?;
+            let buttons = make_buttons()?;
+            taskbar
+                .ThumbBarUpdateButtons(hwnd, &buttons)
+                .map_err(|e| e.to_string())?;
+            CoUninitialize();
+        }
+
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn set_taskbar_playing(app: AppHandle, is_playing: bool) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        return windows_taskbar::set_playing(&app, is_playing);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = app;
+        let _ = is_playing;
+        Ok(())
+    }
+}
 #[derive(Serialize)]
 struct ReleaseInfo {
     tag_name: String,
@@ -272,18 +570,27 @@ fn run_installer(app: AppHandle, path: String) -> Result<(), String> {
     #[cfg(windows)]
     {
         if path.ends_with(".msi") {
-            std::process::Command::new("msiexec")
-                .arg("/i")
-                .arg(&path)
-                .arg("/passive")
+            let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
+            let current_exe_str = current_exe.to_string_lossy();
+
+            // Run msiexec, wait for it to finish, and then relaunch the application
+            let script = format!(
+                "Start-Process msiexec.exe -ArgumentList '/i', '{}', '/passive' -Wait; Start-Process '{}'",
+                path, current_exe_str
+            );
+
+            std::process::Command::new("powershell")
+                .arg("-WindowStyle")
+                .arg("Hidden")
+                .arg("-Command")
+                .arg(&script)
                 .spawn()
                 .map_err(|e: std::io::Error| e.to_string())?;
             return Ok(());
         }
     }
 
-    // Tauri v2 の opener プラグインを使用してファイルを開く
-    use tauri_plugin_opener::OpenerExt;
+    // Open file with system default app when not handling MSI flow.
     app.opener()
         .open_path(&path, None::<&str>)
         .map_err(|e| e.to_string())?;
@@ -335,6 +642,13 @@ pub fn run() {
                 // Register the scheme at runtime (important for Windows dev mode)
                 if let Err(e) = app.deep_link().register("audion") {
                     eprintln!("Failed to register deep link scheme: {}", e);
+                }
+            }
+
+            #[cfg(target_os = "windows")]
+            {
+                if let Err(e) = windows_taskbar::setup(&app.handle().clone()) {
+                    eprintln!("Failed to setup Windows taskbar thumbnail controls: {}", e);
                 }
             }
 
@@ -398,6 +712,7 @@ pub fn run() {
             get_initial_args,
             get_lyrics,
             get_version,
+            set_taskbar_playing,
             fetch_latest_release_info,
             download_installer,
             run_installer
@@ -405,3 +720,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

@@ -451,6 +451,7 @@ function loadTrack(index: number, autoplay = false) {
 
   if (autoplay && audio) player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
   else ui.updatePlayUI(false);
+  syncMediaSession();
 }
 
 function resetPlayer() {
@@ -463,6 +464,7 @@ function resetPlayer() {
   if (albumArt) albumArt.classList.remove('spinning');
   if (trackTitle) trackTitle.textContent = 'Audion';
   if (trackSub) trackSub.textContent = 'Music Player';
+  syncMediaSession();
 }
 
 function togglePlay() {
@@ -471,6 +473,27 @@ function togglePlay() {
   if (state.current === -1) { loadTrack(0, true); return; }
   if (audio) {
     state.playing ? player.pauseAudio(audio, albumArt, playlist) : player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
+    syncMediaSession();
+  }
+}
+
+function playOnly() {
+  const dict = translations[state.lang] || translations.ja;
+  if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
+  if (state.current === -1) {
+    loadTrack(0, true);
+    return;
+  }
+  if (audio && !state.playing) {
+    player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
+    syncMediaSession();
+  }
+}
+
+function pauseOnly() {
+  if (audio && state.playing) {
+    player.pauseAudio(audio, albumArt, playlist);
+    syncMediaSession();
   }
 }
 
@@ -706,6 +729,81 @@ function setVol(e: MouseEvent) {
   if (audio) audio.volume = ratio;
   updateVolBarUI();
   saveSettings();
+}
+
+function getCoverMimeType(cover?: string): string | undefined {
+  if (!cover) return undefined;
+  const match = /^data:(.*?);base64,/i.exec(cover);
+  return match ? match[1] : undefined;
+}
+
+function syncTaskbarPlaybackButton() {
+  if (!isTauri || !invoke) return;
+  invoke('set_taskbar_playing', { isPlaying: state.playing }).catch((e) => {
+    console.warn('Failed to sync taskbar playback button:', e);
+  });
+}
+
+function syncMediaSession() {
+  syncTaskbarPlaybackButton();
+  if (!('mediaSession' in navigator)) return;
+  const mediaSession = navigator.mediaSession;
+  mediaSession.playbackState = state.playing ? 'playing' : 'paused';
+
+  if (state.current < 0 || !state.tracks[state.current]) {
+    mediaSession.metadata = null;
+    return;
+  }
+
+  const currentTrack = state.tracks[state.current];
+  const artwork = currentTrack.cover
+    ? [{
+      src: currentTrack.cover,
+      sizes: '512x512',
+      type: getCoverMimeType(currentTrack.cover),
+    }]
+    : undefined;
+
+  mediaSession.metadata = new MediaMetadata({
+    title: currentTrack.name || 'Unknown Track',
+    artist: currentTrack.artist || 'Unknown Artist',
+    album: currentTrack.album || 'Audion',
+    artwork,
+  });
+}
+
+function setupMediaSessionControls() {
+  if (!('mediaSession' in navigator)) return;
+  const mediaSession = navigator.mediaSession;
+  const safeSetHandler = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+    try {
+      mediaSession.setActionHandler(action, handler);
+    } catch (e) {
+      console.warn(`Media Session action not supported: ${action}`, e);
+    }
+  };
+
+  safeSetHandler('play', () => {
+    if (!state.playing) togglePlay();
+  });
+  safeSetHandler('pause', () => {
+    if (state.playing) togglePlay();
+  });
+  safeSetHandler('stop', () => {
+    resetPlayer();
+  });
+  safeSetHandler('nexttrack', () => {
+    playNext();
+  });
+  safeSetHandler('previoustrack', () => {
+    playPrev();
+  });
+
+  window.addEventListener('audion-play-state-changed', () => {
+    syncMediaSession();
+  });
+
+  syncMediaSession();
 }
 
 
@@ -1201,6 +1299,7 @@ function setupLegacyLogic() {
     const dict = translations[state.lang] || translations.ja;
     resetPlayer();
     state.tracks = [];
+    syncMediaSession();
     if (playlist) playlist.innerHTML = '';
     updateCount();
     dropHint?.classList.remove('hidden');
@@ -1301,7 +1400,10 @@ async function setupShortcuts() {
 
 async function setupTrayListeners() {
   if (!listen) return;
+  await listen('tray-play', () => playOnly());
+  await listen('tray-pause', () => pauseOnly());
   await listen('tray-play-pause', () => togglePlay());
+  await listen('tray-stop', () => resetPlayer());
   await listen('tray-next', () => playNext());
   await listen('tray-prev', () => playPrev());
 }
@@ -1510,6 +1612,7 @@ if (rootEl) {
     setupLegacyLogic();
 
     await setupShortcuts();
+    setupMediaSessionControls();
     await setupTrayListeners();
     await setupDragDrop();
 

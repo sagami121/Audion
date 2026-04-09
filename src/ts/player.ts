@@ -39,6 +39,7 @@ export function playAudio(
     if (artGlow) artGlow.classList.add('active');
     updateActive(playlistEl);
     startVisualizer();
+    window.dispatchEvent(new CustomEvent('audion-play-state-changed'));
   }).catch(e => {
     console.error(e);
     const dict = translations[state.lang] || translations.ja;
@@ -59,4 +60,5 @@ export function pauseAudio(
   }
   updateActive(playlistEl);
   stopVisualizer();
+  window.dispatchEvent(new CustomEvent('audion-play-state-changed'));
 }
