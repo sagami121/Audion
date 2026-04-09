@@ -1,7 +1,7 @@
 # Audion
 
 <div align="center">
-  <img src="img\app_icon.jpg" width="128" height="128" alt="Audion Icon">
+  <img src="img/app_icon.jpg" width="128" height="128" alt="Audion Icon">
   <br>
   <p><strong>Tauri Base Music Player</strong></p>
 
@@ -13,59 +13,79 @@
   <br>
   ![Downloads (Latest)](https://img.shields.io/github/downloads/sagami121/Audion/latest/total?style=for-the-badge&color=8A2BE2&label=latest%20downloads)
   ![Downloads (Total)](https://img.shields.io/github/downloads/sagami121/Audion/total?style=for-the-badge&color=9370DB&label=total%20downloads)
-  
 </div>
 
 ---
 
-## 本ソフトのスクリーンショット
+## スクリーンショット
+
 <div align="center">
   <h3>メイン画面</h3>
-  <img src="docs/1.png" width="800" alt="ホーム" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <img src="docs/1.png" width="800" alt="メイン画面" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
   <br>
-  
+
   <h3>設定画面</h3>
-  <img src="docs/2.png" width="400" alt="設定" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <img src="docs/2.png" width="400" alt="設定画面" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
   <br>
-  
+
   <h3>フィードバック画面</h3>
-  <img src="docs/3.png" width="400" alt="フィードバック" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <img src="docs/3.png" width="400" alt="フィードバック画面" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+
+  <h3>イコライザー</h3>
+  <img src="docs/4.png" width="400" alt="イコライザー" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+
+  <h3>コンプレッサー</h3>
+  <img src="docs/5.png" width="400" alt="コンプレッサー" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+
+  <h3>アプリの更新通知</h3>
+  <img src="docs/6.png" width="400" alt="アプリの更新通知" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 </div>
 
 ---
-# Audionについて
--   **幅広いフォーマット対応**:
-    <p>
-      <img src="https://img.shields.io/badge/MP3-444?style=flat-square">
-      <img src="https://img.shields.io/badge/WAV-444?style=flat-square">
-      <img src="https://img.shields.io/badge/FLAC-444?style=flat-square">
-      <img src="https://img.shields.io/badge/M4A-444?style=flat-square">
-      <img src="https://img.shields.io/badge/OGG-444?style=flat-square">
-      <img src="https://img.shields.io/badge/OPUS-444?style=flat-square">
-      <img src="https://img.shields.io/badge/AIFF-444?style=flat-square">
-    </p>
+
+## Audionについて
+
+Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイヤーです。
+
+- 対応フォーマット:
+  <p>
+    <img src="https://img.shields.io/badge/MP3-444?style=flat-square">
+    <img src="https://img.shields.io/badge/WAV-444?style=flat-square">
+    <img src="https://img.shields.io/badge/FLAC-444?style=flat-square">
+    <img src="https://img.shields.io/badge/M4A-444?style=flat-square">
+    <img src="https://img.shields.io/badge/OGG-444?style=flat-square">
+    <img src="https://img.shields.io/badge/OPUS-444?style=flat-square">
+    <img src="https://img.shields.io/badge/AIFF-444?style=flat-square">
+  </p>
+- インストーラー配布: `.msi`
+- ライセンス: [MIT License](LICENSE)
+
 ---
 
 ## セットアップ
 
-### 開発環境の準備
-1.  [Rust](https://www.rust-lang.org/ja/tools/install) をインストール
-2.  [Node.js](https://nodejs.org/) をインストール
-3.  プロジェクトをクローンまたはダウンロード
+### 前提環境
 
-### 実行・ビルド
+1. [Rust](https://www.rust-lang.org/ja/tools/install) をインストール
+2. [Node.js](https://nodejs.org/) をインストール
+3. このリポジトリをクローン
+
+### 開発・ビルド
+
 ```bash
-# 依存関係のインストール
+# 依存関係をインストール
 npm install
 
 # 開発モードで起動
 npm run tauri dev
 
-# インストーラー (.msi) の作成
+# 本番ビルド (.msi) を作成
 npm run tauri build
 ```
 
 ---
 
-## ライセンス
-本ソフトウェアは [MIT License](LICENSE)で公開されています。
+## リリース
+
+- 最新版: [GitHub Releases](https://github.com/sagami121/Audion/releases)
+- 変更履歴: [Changelog.txt](Changelog.txt)
