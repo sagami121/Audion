@@ -345,14 +345,29 @@ function onPlaylistRowClick(e: any, index: number) {
 }
 
 function removeTrack(index: number) {
-  const wasPlaying = state.playing;
+  const removingCurrent = state.current === index;
+  const wasPlaying = !!audio ? !audio.paused && !audio.ended : state.playing;
+
+  // Stop the currently loaded stream first so a deleted file cannot continue playing.
+  if (removingCurrent && audio) {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    state.playing = false;
+    if (curTime) curTime.textContent = '0:00';
+    if (durTime) durTime.textContent = '0:00';
+    if (seekFill) seekFill.style.width = '0%';
+    if (seekThumb) seekThumb.style.left = '0%';
+  }
+
   state.tracks.splice(index, 1);
   if (playlist) ui.renderPlaylist(playlist, state.tracks, onPlaylistRowClick, plSearch?.value || "");
   updateCount();
   player.buildShuffleOrder();
   player.savePlaylist();
   if (!state.tracks.length) { resetPlayer(); dropHint?.classList.remove('hidden'); return; }
-  if (state.current === index) {
+  if (removingCurrent) {
+    state.current = -1;
     const next = Math.min(index, state.tracks.length - 1);
     loadTrack(next, wasPlaying);
   } else if (state.current > index) {
@@ -458,12 +473,19 @@ function resetPlayer() {
   if (audio) {
     audio.pause();
     audio.currentTime = 0;
+    audio.removeAttribute('src');
+    audio.load();
   }
+  state.current = -1;
   state.playing = false;
   ui.updatePlayUI(false);
   if (albumArt) albumArt.classList.remove('spinning');
   if (trackTitle) trackTitle.textContent = 'Audion';
   if (trackSub) trackSub.textContent = 'Music Player';
+  if (curTime) curTime.textContent = '0:00';
+  if (durTime) durTime.textContent = '0:00';
+  if (seekFill) seekFill.style.width = '0%';
+  if (seekThumb) seekThumb.style.left = '0%';
   syncMediaSession();
 }
 
