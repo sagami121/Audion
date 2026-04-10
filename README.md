@@ -57,7 +57,7 @@ Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイ
     <img src="https://img.shields.io/badge/OPUS-444?style=flat-square">
     <img src="https://img.shields.io/badge/AIFF-444?style=flat-square">
   </p>
-- インストーラー配布: `.msi`
+- インストーラー配布: `.msi`, `.exe`
 - ライセンス: [MIT License](LICENSE)
 
 ---
