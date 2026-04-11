@@ -330,6 +330,11 @@ fn get_initial_args(state: State<'_, AppArgs>) -> Vec<String> {
 }
 
 #[tauri::command]
+fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
+    fs::read(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn read_audio_file(path: String) -> Result<String, String> {
     let bytes = fs::read(&path).map_err(|e| e.to_string())?;
     Ok(general_purpose::STANDARD.encode(&bytes))
@@ -705,6 +710,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            read_binary_file,
             read_audio_file,
             get_file_metadata,
             save_text_file,
