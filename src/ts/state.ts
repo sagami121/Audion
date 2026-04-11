@@ -45,5 +45,13 @@ export const state: AppState = {
     rock: [4, 3, 1, -1, -2, 0, 2, 4, 5, 5],
     jazz: [2, 1, 0, -1, -2, -1, 1, 3, 3, 2],
     classical: [1, 2, 1, 0, -1, 0, 2, 3, 3, 1]
-  }
+  },
+  plView: saved.plView || 'all',
+  reverbEnabled: saved.reverbEnabled || false,
+  reverbLevel: saved.reverbLevel !== undefined ? saved.reverbLevel : 0.4,
+  reverbType: saved.reverbType || 'hall',
+  delayEnabled: saved.delayEnabled || false,
+  delayLevel: saved.delayLevel !== undefined ? saved.delayLevel : 0.3,
+  delayTime: saved.delayTime !== undefined ? saved.delayTime : 0.4,
+  delayFeedback: saved.delayFeedback !== undefined ? saved.delayFeedback : 0.3
 };

@@ -5,8 +5,12 @@ import { startVisualizer, stopVisualizer } from './visualizer.js';
 import { translations } from './translations.js';
 
 export function savePlaylist(): void {
-  const paths = state.tracks.map(t => t.path);
-  localStorage.setItem('af_playlist', JSON.stringify(paths));
+  const minimalTracks = state.tracks.map(t => ({
+    path: t.path,
+    addedAt: t.addedAt,
+    playCount: t.playCount || 0
+  }));
+  localStorage.setItem('af_playlist', JSON.stringify(minimalTracks));
 }
 
 export function buildShuffleOrder(): void {

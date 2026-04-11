@@ -12,6 +12,12 @@ let ctx: CanvasRenderingContext2D | null = null;
 let animationId: number | null = null;
 let isVisualizing = false;
 
+let reverb: ConvolverNode | null = null;
+let reverbGain: GainNode | null = null;
+let delay: DelayNode | null = null;
+let delayGain: GainNode | null = null;
+let delayFeedback: GainNode | null = null;
+
 let primaryColor = '#a78bfa';
 let secondaryColor = '#38bdf8';
 
@@ -49,7 +55,19 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
       compressor = audioCtx.createDynamicsCompressor();
       makeupGain = audioCtx.createGain();
 
-      // Connect: Source -> Filter0 -> ... -> Filter9 -> Compressor -> MakeupGain -> Analyser -> Destination
+      // Reverb
+      reverb = audioCtx.createConvolver();
+      reverb.buffer = generateImpulse(2.0, 2.0);
+      reverbGain = audioCtx.createGain();
+      
+      // Delay
+      delay = audioCtx.createDelay(2.0);
+      delayGain = audioCtx.createGain();
+      delayFeedback = audioCtx.createGain();
+      delay.connect(delayFeedback);
+      delayFeedback.connect(delay); // Feedback loop
+
+      // Connect: Source -> FilterChain -> Compressor -> MakeupGain -> Reverb/Delay -> Analyser -> Destination
       let lastNode: AudioNode = source;
       filters.forEach(filter => {
         lastNode.connect(filter);
@@ -57,7 +75,18 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
       });
       lastNode.connect(compressor);
       compressor.connect(makeupGain);
-      makeupGain.connect(analyser);
+
+      // Parallel/Serial Effects Routing
+      makeupGain.connect(analyser); // Dry signal to analyser
+      
+      makeupGain.connect(reverb);
+      reverb.connect(reverbGain);
+      reverbGain.connect(analyser);
+
+      makeupGain.connect(delay);
+      delay.connect(delayGain);
+      delayGain.connect(analyser);
+
       analyser.connect(audioCtx.destination);
 
       analyser.fftSize = 128;
@@ -90,10 +119,61 @@ export function updateCompSettings(settings: CompSettings, enabled: boolean): vo
     compressor.release.setTargetAtTime(release, time, 0.05);
     makeupGain.gain.setTargetAtTime(Math.pow(10, makeup / 20), time, 0.05);
   } else {
-    // Default/Bypass: setting ratio to 1 effectively disables compression
     compressor.ratio.setTargetAtTime(1, time, 0.05);
     makeupGain.gain.setTargetAtTime(1, time, 0.05);
   }
+}
+
+let currentReverbType: string = '';
+
+export function updateEffectsSettings(
+  reverbSettings: { enabled: boolean; level: number; type: 'room' | 'hall' | 'cave' },
+  delaySettings: { enabled: boolean; level: number; time: number; feedback: number }
+): void {
+  if (!audioCtx || !reverb || !reverbGain || !delay || !delayGain || !delayFeedback) return;
+
+  const time = audioCtx.currentTime;
+
+  // Reverb Parameters
+  if (reverbSettings.type !== currentReverbType) {
+    const dur = reverbSettings.type === 'room' ? 0.8 : reverbSettings.type === 'hall' ? 2.5 : 5.0;
+    const decay = reverbSettings.type === 'room' ? 2.0 : reverbSettings.type === 'hall' ? 1.5 : 1.0;
+    reverb.buffer = generateImpulse(dur, decay);
+    currentReverbType = reverbSettings.type;
+  }
+  
+  if (reverbSettings.enabled) {
+    reverbGain.gain.setTargetAtTime(reverbSettings.level, time, 0.05);
+  } else {
+    reverbGain.gain.setTargetAtTime(0, time, 0.05);
+  }
+
+  // Delay Parameters - update regardless of enabled state so there's no catch-up pitch sweep
+  const safeFeedback = Math.min(Math.max(delaySettings.feedback, 0), 0.95);
+  delay.delayTime.setTargetAtTime(delaySettings.time, time, 0.05);
+  delayFeedback.gain.setTargetAtTime(safeFeedback, time, 0.05);
+
+  if (delaySettings.enabled) {
+    delayGain.gain.setTargetAtTime(delaySettings.level, time, 0.05);
+  } else {
+    delayGain.gain.setTargetAtTime(0, time, 0.05);
+  }
+}
+
+function generateImpulse(duration: number, decay: number): AudioBuffer {
+  if (!audioCtx) return new AudioBuffer({ length: 1, sampleRate: 44100 });
+  const sampleRate = audioCtx.sampleRate;
+  const length = sampleRate * duration;
+  const impulse = audioCtx.createBuffer(2, length, sampleRate);
+
+  for (let channel = 0; channel < 2; channel++) {
+    const channelData = impulse.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+        // White noise multiplied by exponential decay
+        channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    }
+  }
+  return impulse;
 }
 
 function resizeCanvas(): void {

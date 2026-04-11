@@ -6,6 +6,7 @@ export interface Track {
   cover: string;
   duration: number;
   addedAt: number;
+  playCount: number;
 }
 
 export interface CompSettings {
@@ -49,4 +50,12 @@ export interface AppState {
   sidebarWidth: number;
   showLyrics: boolean;
   eqPresets: Record<string, number[]>;
+  plView: 'all' | 'recent' | 'popular';
+  reverbEnabled: boolean;
+  reverbLevel: number;
+  reverbType: 'room' | 'hall' | 'cave';
+  delayEnabled: boolean;
+  delayLevel: number;
+  delayTime: number;
+  delayFeedback: number;
 }

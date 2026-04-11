@@ -88,6 +88,12 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            <div className="pl-views">
+              <button className="pl-view-btn active" data-view="all" data-i18n="view_all">すべて</button>
+              <button className="pl-view-btn" data-view="recent" data-i18n="view_recent">最近追加</button>
+              <button className="pl-view-btn" data-view="popular" data-i18n="view_popular">よく聴く</button>
+            </div>
+
             <div className="playlist-hdr">
               <span className="lbl-sm" data-i18n="playlist">プレイリスト</span>
               <div className="playlist-hdr-actions">
@@ -168,10 +174,11 @@ const App: React.FC = () => {
               <div className="eq-tabs">
                 <button className="eq-tab-btn active" data-tab="eq" data-i18n="equalizer">イコライザー</button>
                 <button className="eq-tab-btn" data-tab="comp" data-i18n="compressor">コンプレッサー</button>
+                <button className="eq-tab-btn" data-tab="fx" data-i18n="fx">エフェクト</button>
               </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div id="eqHeaderControls" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <button className="theme-btn" id="btnEqReset" data-i18n="reset" style={{ padding: '4px 12px', fontSize: '11px' }}>リセット</button>
-                <label className="setting-lbl" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <label className="setting-lbl" id="eqToggleLabel" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                   <input type="checkbox" id="checkEq" />
                   <span id="eqStatusText" style={{ fontSize: '11px', fontWeight: 600 }}>OFF</span>
                 </label>
@@ -225,6 +232,54 @@ const App: React.FC = () => {
                   <span data-i18n="makeup">Makeup ゲイン</span>
                   <input type="range" className="comp-slider" id="compMakeup" min="0" max="20" step="0.1" defaultValue="0" />
                   <span className="comp-val" id="valMakeup">0 dB</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="fxTabContent" className="tab-content">
+              <div className="fx-container">
+                <div className="fx-group" id="reverbGroup">
+                  <div className="fx-hdr">
+                    <span className="lbl-sm" data-i18n="reverb">リバーブ</span>
+                    <input type="checkbox" id="checkReverb" />
+                  </div>
+                  <div className="fx-controls">
+                    <div className="fx-row">
+                      <span data-i18n="dry_wet">Dry / Wet</span>
+                      <input type="range" id="reverbLevel" min="0" max="1" step="0.01" defaultValue="0.4" />
+                    </div>
+                    <div className="fx-row">
+                      <span data-i18n="type">タイプ</span>
+                      <select id="reverbType" className="select-input" style={{ padding: '2px 8px', fontSize: '11px' }}>
+                        <option value="room" data-i18n="room">部屋</option>
+                        <option value="hall" data-i18n="hall">ホール</option>
+                        <option value="cave" data-i18n="cave">洞窟</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="setting-divider" style={{ margin: '8px 0' }}></div>
+
+                <div className="fx-group" id="delayGroup">
+                  <div className="fx-hdr">
+                    <span className="lbl-sm" data-i18n="delay">ディレイ</span>
+                    <input type="checkbox" id="checkDelay" />
+                  </div>
+                  <div className="fx-controls">
+                    <div className="fx-row">
+                      <span data-i18n="dry_wet">Dry / Wet</span>
+                      <input type="range" id="delayLevel" min="0" max="1" step="0.01" defaultValue="0.3" />
+                    </div>
+                    <div className="fx-row">
+                      <span data-i18n="time">時間</span>
+                      <input type="range" id="delayTime" min="0" max="2" step="0.01" defaultValue="0.4" />
+                    </div>
+                    <div className="fx-row">
+                      <span data-i18n="feedback">フィードバック</span>
+                      <input type="range" id="delayFeedback" min="0" max="0.9" step="0.01" defaultValue="0.3" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -460,6 +515,34 @@ const App: React.FC = () => {
 
       <audio id="audio" crossOrigin="anonymous"></audio>
       <canvas id="colorCanvas" style={{ display: 'none' }}></canvas>
+
+      <div className="context-menu" id="contextMenu">
+        <div className="context-menu-item" id="cmMoveUp">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span data-i18n="move_up">一つ上へ</span>
+        </div>
+        <div className="context-menu-item" id="cmMoveDown">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span data-i18n="move_down">一つ下へ</span>
+        </div>
+        <div className="context-menu-divider"></div>
+        <div className="context-menu-item" id="cmMoveTop">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M17 11l-5-5-5 5M17 18l-5-5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span data-i18n="move_top">一番上へ</span>
+        </div>
+        <div className="context-menu-item" id="cmMoveBottom">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M7 13l5 5 5-5M7 6l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span data-i18n="move_bottom">一番下へ</span>
+        </div>
+      </div>
     </>
   );
 };

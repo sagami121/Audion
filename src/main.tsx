@@ -6,9 +6,10 @@ import * as player from './ts/player';
 import * as ui from './ts/ui';
 import { translations } from './ts/translations';
 import { CONFIG } from './ts/config';
-import { initVisualizer, updateEqGains, updateCompSettings } from './ts/visualizer';
+import { initVisualizer, updateEqGains, updateCompSettings, updateEffectsSettings } from './ts/visualizer';
 import { initUpdater } from './ts/update';
 import muteIcon from './assets/mute.png';
+import type { Track } from './types';
 
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -112,6 +113,17 @@ let valMakeup: HTMLSpanElement | null = null;
 let eqPresetsSelect: HTMLSelectElement | null = null;
 let verEl: HTMLSpanElement | null = null;
 
+let plViewBtns: NodeListOf<HTMLButtonElement> | null = null;
+let checkReverb: HTMLInputElement | null = null;
+let reverbLevel: HTMLInputElement | null = null;
+let reverbType: HTMLSelectElement | null = null;
+let checkDelay: HTMLInputElement | null = null;
+let delayLevel: HTMLInputElement | null = null;
+let delayTime: HTMLInputElement | null = null;
+let delayFeedback: HTMLInputElement | null = null;
+let btnReverbReset: HTMLButtonElement | null = null;
+let btnDelayReset: HTMLButtonElement | null = null;
+
 const metaCache = new Map();
 let normalSize: LogicalSize | PhysicalSize = new LogicalSize(1000, 660);
 
@@ -196,11 +208,19 @@ function updateEqUI() {
 
   const activeTabBtn = document.querySelector('.eq-tab-btn.active') as HTMLElement | null;
   const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'eq';
-  const enabled = activeTab === 'eq' ? state.eqEnabled : state.compEnabled;
+  let enabled = false;
+  if (activeTab === 'eq') enabled = state.eqEnabled;
+  else if (activeTab === 'comp') enabled = state.compEnabled;
+  else if (activeTab === 'fx') enabled = state.reverbEnabled || state.delayEnabled;
 
   if (checkEq) checkEq.checked = enabled;
   const dict = translations[state.lang] || translations.ja;
   if (eqStatusText) eqStatusText.textContent = enabled ? (dict.eq_on || "ON") : (dict.eq_off || "OFF");
+
+  const hdrCtrl = document.getElementById('eqHeaderControls');
+  if (hdrCtrl) {
+    hdrCtrl.style.display = activeTab === 'fx' ? 'none' : 'flex';
+  }
 
   eqSliders?.forEach((slider, i) => {
     slider.value = state.eqGains[i].toString();
@@ -218,10 +238,23 @@ function updateEqUI() {
   if (compRelease) compRelease.value = state.compSettings.release.toString();
   if (compMakeup) compMakeup.value = state.compSettings.makeup.toString();
 
+  if (checkReverb) checkReverb.checked = state.reverbEnabled;
+  if (reverbLevel) reverbLevel.value = state.reverbLevel.toString();
+  if (reverbType) reverbType.value = state.reverbType;
+  
+  if (checkDelay) checkDelay.checked = state.delayEnabled;
+  if (delayLevel) delayLevel.value = state.delayLevel.toString();
+  if (delayTime) delayTime.value = state.delayTime.toString();
+  if (delayFeedback) delayFeedback.value = state.delayFeedback.toString();
+
   updateCompValuesUI();
 
   updateEqGains(state.eqGains, state.eqEnabled);
   updateCompSettings(state.compSettings, state.compEnabled);
+  updateEffectsSettings(
+    { enabled: state.reverbEnabled, level: state.reverbLevel, type: state.reverbType },
+    { enabled: state.delayEnabled, level: state.delayLevel, time: state.delayTime, feedback: state.delayFeedback }
+  );
 }
 
 function updateCompValuesUI() {
@@ -344,6 +377,42 @@ function onPlaylistRowClick(e: any, index: number) {
   else loadTrack(index, true);
 }
 
+function getPlaylistView(): {track: Track, globalIdx: number}[] {
+  let list = state.tracks.map((track, globalIdx) => ({ track, globalIdx }));
+  
+  if (state.plView === 'recent') {
+    list.sort((a, b) => b.track.addedAt - a.track.addedAt);
+  } else if (state.plView === 'popular') {
+    list.sort((a, b) => (b.track.playCount || 0) - (a.track.playCount || 0));
+  }
+  
+  return list;
+}
+
+function updatePlaylistUI() {
+  if (playlist) {
+    ui.renderPlaylist(playlist, getPlaylistView(), onPlaylistRowClick, plSearch?.value || "");
+  }
+}
+
+function onReorder(from: number, to: number) {
+  if (state.plView !== 'all') return; // Cannot reorder in smart playlists
+  const movedTrack = state.tracks.splice(from, 1)[0];
+  state.tracks.splice(to, 0, movedTrack);
+
+  if (state.current === from) {
+    state.current = to;
+  } else if (from < state.current && to >= state.current) {
+    state.current--;
+  } else if (from > state.current && to <= state.current) {
+    state.current++;
+  }
+
+  updatePlaylistUI();
+  player.buildShuffleOrder();
+  player.savePlaylist();
+}
+
 function removeTrack(index: number) {
   const removingCurrent = state.current === index;
   const wasPlaying = !!audio ? !audio.paused && !audio.ended : state.playing;
@@ -361,7 +430,7 @@ function removeTrack(index: number) {
   }
 
   state.tracks.splice(index, 1);
-  if (playlist) ui.renderPlaylist(playlist, state.tracks, onPlaylistRowClick, plSearch?.value || "");
+  updatePlaylistUI();
   updateCount();
   player.buildShuffleOrder();
   player.savePlaylist();
@@ -381,36 +450,42 @@ function updateCount() {
   if (plCount) plCount.textContent = `${state.tracks.length}${dict.tracks_count || ' 曲'}`;
 }
 
-async function addPaths(paths: string[], isInitial = false) {
+async function addPaths(paths: any[], isInitial = false) {
   let added = 0;
   let skipped = 0;
   const normalizePath = (p: string) => p.replace(/\\/g, '/');
 
-  for (const path of paths) {
-    const normPath = normalizePath(path).toLowerCase();
+  for (const item of paths) {
+    const isObj = typeof item === 'object';
+    const pathValue = isObj ? item.path : item;
+    const addedAt = isObj && item.addedAt ? item.addedAt : Date.now();
+    const playCount = isObj && item.playCount ? item.playCount : 0;
+
+    const normPath = normalizePath(pathValue).toLowerCase();
     if (state.tracks.some(t => normalizePath(t.path).toLowerCase() === normPath)) {
       skipped++;
       continue;
     }
     try {
       let meta: any;
-      if (metaCache.has(path)) {
-        meta = metaCache.get(path);
+      if (metaCache.has(pathValue)) {
+        meta = metaCache.get(pathValue);
       } else {
         if (!invoke) continue;
-        meta = await invoke('get_file_metadata', { path });
-        metaCache.set(path, meta);
+        meta = await invoke('get_file_metadata', { path: pathValue });
+        metaCache.set(pathValue, meta);
       }
 
       if (meta) {
         state.tracks.push({
-          path,
+          path: pathValue,
           name: meta.name,
           artist: meta.artist,
           album: meta.album,
           cover: meta.cover,
           duration: meta.duration || 0,
-          addedAt: Date.now()
+          addedAt,
+          playCount
         });
 
         const idx = state.tracks.length - 1;
@@ -420,18 +495,21 @@ async function addPaths(paths: string[], isInitial = false) {
           track.name.toLowerCase().includes(filter) ||
           (track.artist && track.artist.toLowerCase().includes(filter));
 
-        if (matchesFilter && playlist) {
-          const row = ui.createPlaylistRow(idx, track, onPlaylistRowClick);
+        if (state.plView === 'all' && matchesFilter && playlist) {
+          const displayIdx = playlist.childElementCount;
+          const row = ui.createPlaylistRow(idx, displayIdx, track, onPlaylistRowClick);
           playlist.appendChild(row);
+          ui.setupPlaylistRowEvents(row, idx);
         }
         added++;
       }
     } catch (e) {
-      console.warn('Failed to add', path, e);
+      console.warn('Failed to add', pathValue, e);
     }
   }
   updateCount();
   if (added > 0) {
+    if (state.plView !== 'all') updatePlaylistUI();
     const dict = translations[state.lang] || translations.ja;
     if (dropHint) dropHint.classList.add('hidden');
     if (!isInitial) {
@@ -487,6 +565,15 @@ function resetPlayer() {
   if (seekFill) seekFill.style.width = '0%';
   if (seekThumb) seekThumb.style.left = '0%';
   syncMediaSession();
+}
+
+function toggleMute() {
+  state.muted = !state.muted;
+  if (audio) {
+    audio.volume = state.muted ? 0 : state.volume;
+  }
+  updateVolBarUI();
+  saveSettings();
 }
 
 function togglePlay() {
@@ -609,8 +696,13 @@ async function loadPlaylist() {
     const stored = localStorage.getItem('af_playlist');
     if (stored) {
       try {
-        const paths = JSON.parse(stored);
-        if (paths.length) await addPaths(paths, true);
+        const storedItems = JSON.parse(stored);
+        if (storedItems.length) {
+          const items = storedItems.map((item: any) => 
+            typeof item === 'string' ? { path: item, addedAt: Date.now(), playCount: 0 } : item
+          );
+          await addPaths(items, true);
+        }
       } catch (e) { console.error('Load failed', e); }
     }
   }
@@ -1046,15 +1138,19 @@ function setupLegacyLogic() {
   btnMiniMode?.addEventListener('click', () => {
     toggleMiniMode();
   });
-  
+
   playBtn?.addEventListener('click', () => {
     togglePlay();
   });
-  
+
+  muteBtn?.addEventListener('click', () => {
+    toggleMute();
+  });
+
   prevBtn?.addEventListener('click', () => {
     playPrev();
   });
-  
+
   nextBtn?.addEventListener('click', () => {
     playNext();
   });
@@ -1221,6 +1317,132 @@ function setupLegacyLogic() {
     el?.addEventListener('change', () => saveSettings());
   });
 
+  const compDefaults: Record<string, number> = {
+    compThreshold: -24, compKnee: 30, compRatio: 12,
+    compAttack: 0.003, compRelease: 0.25, compMakeup: 0
+  };
+  [compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach(el => {
+    el?.addEventListener('dblclick', () => {
+      const key = el.id as keyof typeof compDefaults;
+      const def = compDefaults[key];
+      if (def === undefined) return;
+      el.value = def.toString();
+      // Map element id to state key
+      if (key === 'compThreshold') state.compSettings.threshold = def;
+      else if (key === 'compKnee') state.compSettings.knee = def;
+      else if (key === 'compRatio') state.compSettings.ratio = def;
+      else if (key === 'compAttack') state.compSettings.attack = def;
+      else if (key === 'compRelease') state.compSettings.release = def;
+      else if (key === 'compMakeup') state.compSettings.makeup = def;
+      updateCompValuesUI();
+      updateCompSettings(state.compSettings, state.compEnabled);
+      saveSettings();
+    });
+  });
+
+  const updateFx = () => {
+    if (audio) {
+      updateEffectsSettings(
+        { enabled: state.reverbEnabled, level: state.reverbLevel, type: state.reverbType },
+        { enabled: state.delayEnabled, level: state.delayLevel, time: state.delayTime, feedback: state.delayFeedback }
+      );
+    }
+  };
+
+  checkReverb?.addEventListener('change', (e: Event) => {
+    state.reverbEnabled = (e.target as HTMLInputElement).checked;
+    updateFx();
+    saveSettings();
+  });
+  reverbLevel?.addEventListener('input', (e: Event) => {
+    state.reverbLevel = parseFloat((e.target as HTMLInputElement).value);
+    updateFx();
+  });
+  reverbType?.addEventListener('change', (e: Event) => {
+    state.reverbType = (e.target as HTMLSelectElement).value as any;
+    updateFx();
+    saveSettings();
+  });
+  
+  checkDelay?.addEventListener('change', (e: Event) => {
+    state.delayEnabled = (e.target as HTMLInputElement).checked;
+    updateFx();
+    saveSettings();
+  });
+  delayLevel?.addEventListener('input', (e: Event) => {
+    state.delayLevel = parseFloat((e.target as HTMLInputElement).value);
+    updateFx();
+  });
+  delayTime?.addEventListener('input', (e: Event) => {
+    state.delayTime = parseFloat((e.target as HTMLInputElement).value);
+    updateFx();
+  });
+  delayFeedback?.addEventListener('input', (e: Event) => {
+    state.delayFeedback = parseFloat((e.target as HTMLInputElement).value);
+    updateFx();
+  });
+
+  [reverbLevel, delayLevel, delayTime, delayFeedback].forEach(el => {
+    el?.addEventListener('change', () => saveSettings());
+  });
+
+  // FX dblclick-to-default
+  reverbLevel?.addEventListener('dblclick', () => {
+    state.reverbLevel = 0.4; updateEqUI(); updateFx(); saveSettings();
+  });
+  delayLevel?.addEventListener('dblclick', () => {
+    state.delayLevel = 0.3; updateEqUI(); updateFx(); saveSettings();
+  });
+  delayTime?.addEventListener('dblclick', () => {
+    state.delayTime = 0.4; updateEqUI(); updateFx(); saveSettings();
+  });
+  delayFeedback?.addEventListener('dblclick', () => {
+    state.delayFeedback = 0.3; updateEqUI(); updateFx(); saveSettings();
+  });
+
+  // FX reset buttons
+  btnReverbReset?.addEventListener('click', () => {
+    state.reverbEnabled = false;
+    state.reverbLevel = 0.4;
+    state.reverbType = 'hall';
+    updateEqUI(); updateFx(); saveSettings();
+  });
+  btnDelayReset?.addEventListener('click', () => {
+    state.delayEnabled = false;
+    state.delayLevel = 0.3;
+    state.delayTime = 0.4;
+    state.delayFeedback = 0.3;
+    updateEqUI(); updateFx(); saveSettings();
+  });
+
+  // Speed slider dblclick-to-default
+  speedSlider?.addEventListener('dblclick', () => { setSpeed(1.0); });
+
+  // Volume bar dblclick-to-default (100%)
+  volBar?.addEventListener('dblclick', () => {
+    state.volume = 1.0;
+    state.muted = false;
+    if (audio) audio.volume = 1.0;
+    updateVolBarUI();
+    saveSettings();
+  });
+
+  plViewBtns?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view as 'all' | 'recent' | 'popular';
+      if (!view) return;
+      state.plView = view;
+      
+      plViewBtns?.forEach(b => b.classList.toggle('active', b === btn));
+      updatePlaylistUI();
+      saveSettings();
+    });
+  });
+
+  plSearch?.addEventListener('input', () => {
+    updatePlaylistUI();
+  });
+
   btnSavePlaylist?.addEventListener('click', async () => {
     const dict = translations[state.lang] || translations.ja;
     if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
@@ -1236,7 +1458,9 @@ function setupLegacyLogic() {
         path: t.path,
         name: t.name,
         artist: t.artist || '',
-        album: t.album || ''
+        album: t.album || '',
+        playCount: t.playCount || 0,
+        addedAt: t.addedAt || Date.now()
       }));
 
       const jsonStr = JSON.stringify(playlistData, null, 2);
@@ -1591,6 +1815,17 @@ if (rootEl) {
     eqPresetsSelect = document.getElementById('eqPresetsSelect') as HTMLSelectElement | null;
     verEl = document.getElementById('appVersion') as HTMLSpanElement | null;
 
+    plViewBtns = document.querySelectorAll('.pl-view-btn') as NodeListOf<HTMLButtonElement>;
+    checkReverb = document.getElementById('checkReverb') as HTMLInputElement | null;
+    reverbLevel = document.getElementById('reverbLevel') as HTMLInputElement | null;
+    reverbType = document.getElementById('reverbType') as HTMLSelectElement | null;
+    checkDelay = document.getElementById('checkDelay') as HTMLInputElement | null;
+    delayLevel = document.getElementById('delayLevel') as HTMLInputElement | null;
+    delayTime = document.getElementById('delayTime') as HTMLInputElement | null;
+    delayFeedback = document.getElementById('delayFeedback') as HTMLInputElement | null;
+    btnReverbReset = document.getElementById('btnReverbReset') as HTMLButtonElement | null;
+    btnDelayReset = document.getElementById('btnDelayReset') as HTMLButtonElement | null;
+
     if (audio) {
       audio.volume = state.volume;
       audio.addEventListener('loadedmetadata', () => {
@@ -1612,6 +1847,11 @@ if (rootEl) {
         }
       });
       audio.addEventListener('ended', () => {
+        if (state.current >= 0 && state.current < state.tracks.length) {
+          state.tracks[state.current].playCount = (state.tracks[state.current].playCount || 0) + 1;
+          player.savePlaylist();
+          if (state.plView === 'popular') updatePlaylistUI();
+        }
         if (state.repeat === 'one') {
           if (audio) {
             audio.currentTime = 0;
@@ -1636,6 +1876,7 @@ if (rootEl) {
     await setupShortcuts();
     setupMediaSessionControls();
     await setupTrayListeners();
+    ui.initContextMenu(onReorder);
     await setupDragDrop();
 
     initUpdater(isTauri);
