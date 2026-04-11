@@ -37,8 +37,11 @@
   <h3>コンプレッサー</h3>
   <img src="docs/5.png" width="400" alt="コンプレッサー" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 
+  <h3>リバーブ・ディレイ</h3>
+  <img src="docs/6.png" width="400" alt="リバーブ・ディレイ" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+
   <h3>アプリの更新通知</h3>
-  <img src="docs/6.png" width="400" alt="アプリの更新通知" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <img src="docs/7.png" width="400" alt="アプリの更新通知" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 </div>
 
 ---
