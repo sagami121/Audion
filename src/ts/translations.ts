@@ -135,7 +135,8 @@ export const translations: Translations = {
     move_down: "一つ下へ",
     move_top: "一番上へ",
     move_bottom: "一番下へ",
-    fx_reset: "リセット"
+    fx_reset: "リセット",
+    discord_rpc: "再生中の曲を Discord に表示する"
   },
   en: {
     app_title: "Audion — Music Player",
@@ -264,7 +265,8 @@ export const translations: Translations = {
     move_down: "Move Down",
     move_top: "Move to Top",
     move_bottom: "Move to Bottom",
-    fx_reset: "Reset"
+    fx_reset: "Reset",
+    discord_rpc: "Show playback on Discord"
   },
   ko: {
     app_title: "Audion — 음악 플레이어",
@@ -394,7 +396,8 @@ export const translations: Translations = {
     move_down: "아래로 이동",
     move_top: "맨 위로",
     move_bottom: "맨 아래로",
-    fx_reset: "초기화"
+    fx_reset: "초기화",
+    discord_rpc: "Discord에 현재 곡 표시"
   },
 
   zh: {
@@ -524,6 +527,7 @@ export const translations: Translations = {
     move_down: "下移",
     move_top: "移到顶部",
     move_bottom: "移到底部",
-    fx_reset: "重置"
+    fx_reset: "重置",
+    discord_rpc: "在 Discord 上显示当前歌曲"
   }
 };

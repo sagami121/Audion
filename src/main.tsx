@@ -8,6 +8,7 @@ import { translations } from './ts/translations';
 import { CONFIG } from './ts/config';
 import { initVisualizer, updateEqGains, updateCompSettings, updateEffectsSettings } from './ts/visualizer';
 import { initUpdater } from './ts/update';
+import { updateDiscordRPC } from './ts/discord';
 import muteIcon from './assets/mute.png';
 import type { Track } from './types';
 
@@ -75,6 +76,7 @@ let btnSaveSettings: HTMLButtonElement | null = null;
 let checkOnTop: HTMLInputElement | null = null;
 let checkRestoreSession: HTMLInputElement | null = null;
 let checkShowLyrics: HTMLInputElement | null = null;
+let checkDiscordRPC: HTMLInputElement | null = null;
 let btnReportBug: HTMLButtonElement | null = null;
 let bugModal: HTMLDivElement | null = null;
 let btnCloseBug: HTMLButtonElement | null = null;
@@ -975,6 +977,7 @@ function setupLegacyLogic() {
     if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
     if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
     if (checkShowLyrics) checkShowLyrics.checked = state.showLyrics;
+    if (checkDiscordRPC) checkDiscordRPC.checked = state.discordRPCEnabled;
     if (langSelect) langSelect.value = state.lang;
     btnThemeDark?.classList.toggle('active', state.theme === 'dark');
     btnThemeLight?.classList.toggle('active', state.theme === 'light');
@@ -1004,6 +1007,12 @@ function setupLegacyLogic() {
       if (lyricsContainer) {
         lyricsContainer.style.display = state.showLyrics ? 'flex' : 'none';
       }
+    }
+
+    if (checkDiscordRPC && checkDiscordRPC.checked !== state.discordRPCEnabled) {
+      state.discordRPCEnabled = checkDiscordRPC.checked;
+      localStorage.setItem('af_discord_rpc', state.discordRPCEnabled.toString());
+      updateDiscordRPC();
     }
 
     const selectedTheme = btnThemeDark?.classList.contains('active') ? 'dark' : 'light';
@@ -1777,6 +1786,7 @@ if (rootEl) {
     checkOnTop = document.getElementById('checkOnTop') as HTMLInputElement | null;
     checkRestoreSession = document.getElementById('checkRestoreSession') as HTMLInputElement | null;
     checkShowLyrics = document.getElementById('checkShowLyrics') as HTMLInputElement | null;
+    checkDiscordRPC = document.getElementById('checkDiscordRPC') as HTMLInputElement | null;
     btnReportBug = document.getElementById('btnReportBug') as HTMLButtonElement | null;
     bugModal = document.getElementById('bugModal') as HTMLDivElement | null;
     btnCloseBug = document.getElementById('btnCloseBug') as HTMLButtonElement | null;

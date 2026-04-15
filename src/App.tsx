@@ -405,6 +405,12 @@ const App: React.FC = () => {
                 <input type="checkbox" id="checkShowLyrics" />
               </label>
             </div>
+            <div className="setting-item">
+              <label className="setting-lbl">
+                <span data-i18n="discord_rpc">Discord Rich Presence</span>
+                <input type="checkbox" id="checkDiscordRPC" />
+              </label>
+            </div>
             <div className="setting-divider"></div>
             <div className="setting-item">
               <label className="form-group">

@@ -58,4 +58,6 @@ export interface AppState {
   delayLevel: number;
   delayTime: number;
   delayFeedback: number;
+  discordRPCEnabled: boolean;
+  trackStartTime: number;
 }

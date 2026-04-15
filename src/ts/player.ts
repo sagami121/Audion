@@ -3,6 +3,7 @@ import { showToast } from './utils.js';
 import { updateActive, updatePlayUI } from './ui.js';
 import { startVisualizer, stopVisualizer } from './visualizer.js';
 import { translations } from './translations.js';
+import { updateDiscordRPC } from './discord.js';
 
 export function savePlaylist(): void {
   const minimalTracks = state.tracks.map(t => ({
@@ -43,6 +44,7 @@ export function playAudio(
     if (artGlow) artGlow.classList.add('active');
     updateActive(playlistEl);
     startVisualizer();
+    updateDiscordRPC();
     window.dispatchEvent(new CustomEvent('audion-play-state-changed'));
   }).catch(e => {
     console.error(e);
@@ -64,5 +66,6 @@ export function pauseAudio(
   }
   updateActive(playlistEl);
   stopVisualizer();
+  updateDiscordRPC();
   window.dispatchEvent(new CustomEvent('audion-play-state-changed'));
 }
