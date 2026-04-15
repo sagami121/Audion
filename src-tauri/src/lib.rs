@@ -4,13 +4,18 @@ use lofty::prelude::*;
 use lofty::probe::Probe;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use std::sync::Mutex;
 use tauri::{Manager, AppHandle, Emitter, State};
 use serde::Serialize;
 use tauri_plugin_opener::OpenerExt;
 
+mod discord_rpc;
+use discord_rpc::{DiscordState, set_discord_presence, clear_discord_presence};
+use std::sync::Arc;
+use tokio::sync::Mutex as TokioMutex;
+use discord_presence::Client;
+
 struct AppArgs {
-    args: Mutex<Vec<String>>,
+    args: TokioMutex<Vec<String>>,
 }
 
 #[cfg(target_os = "windows")]
@@ -324,9 +329,9 @@ struct ReleaseAsset {
 }
 
 #[tauri::command]
-fn get_initial_args(state: State<'_, AppArgs>) -> Vec<String> {
-    let mut args = state.args.lock().unwrap();
-    std::mem::take(&mut *args) // Return and clear the args
+async fn get_initial_args(state: State<'_, AppArgs>) -> Result<Vec<String>, String> {
+    let mut args = state.args.lock().await;
+    Ok(std::mem::take(&mut *args)) // Return and clear the args
 }
 
 #[tauri::command]
@@ -607,7 +612,10 @@ fn run_installer(app: AppHandle, path: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(AppArgs {
-            args: Mutex::new(std::env::args().skip(1).collect()), // Skip exe path
+            args: TokioMutex::new(std::env::args().skip(1).collect()), // Skip exe path
+        })
+        .manage(DiscordState {
+            client: Arc::new(TokioMutex::new(None)),
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -635,6 +643,37 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            let state = app.state::<DiscordState>();
+            let client_ptr = state.client.clone();
+            
+            println!("Initializing Discord client in setup...");
+            let mut client = Client::new(1493885713463251014u64);
+            
+            client.on_ready(|_ctx| {
+                println!("Discord RPC: Successfully connected!");
+            });
+
+            client.on_error(|err| {
+                eprintln!("Discord RPC: Error occurred: {:?}", err);
+            });
+
+            client.start();
+            println!("Discord client start() called.");
+            match client_ptr.try_lock() {
+                Ok(mut lock) => {
+                    *lock = Some(client);
+                    println!("Discord client instance stored in state.");
+                },
+                Err(_) => {
+                    let client_ptr_async = client_ptr.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let mut lock = client_ptr_async.lock().await;
+                        *lock = Some(client);
+                        println!("Discord client instance stored in state (async).");
+                    });
+                }
+            }
+
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -721,7 +760,9 @@ pub fn run() {
             set_taskbar_playing,
             fetch_latest_release_info,
             download_installer,
-            run_installer
+            run_installer,
+            set_discord_presence,
+            clear_discord_presence
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
