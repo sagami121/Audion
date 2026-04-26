@@ -91,8 +91,9 @@ const App: React.FC = () => {
             <div className="pl-views">
               <button className="pl-view-btn active" data-view="all" data-i18n="view_all">すべて</button>
               <button className="pl-view-btn" data-view="recent" data-i18n="view_recent">最近追加</button>
-              <button className="pl-view-btn" data-view="popular" data-i18n="view_popular">よく聴く</button>
-            </div>
+              <button className="pl-view-btn" data-view="popular" data-i18n="popular">人気順</button>
+              <button className="pl-view-btn" data-view="favorites" data-i18n="favorites">お気に入り</button>
+              </div>
 
             <div className="playlist-hdr">
               <span className="lbl-sm" data-i18n="playlist">プレイリスト</span>

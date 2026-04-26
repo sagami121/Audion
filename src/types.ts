@@ -7,6 +7,7 @@ export interface Track {
   duration: number;
   addedAt: number;
   playCount: number;
+  favorite?: boolean;
 }
 
 export interface CompSettings {
@@ -50,7 +51,7 @@ export interface AppState {
   sidebarWidth: number;
   showLyrics: boolean;
   eqPresets: Record<string, number[]>;
-  plView: 'all' | 'recent' | 'popular';
+  plView: 'all' | 'recent' | 'popular' | 'favorites';
   reverbEnabled: boolean;
   reverbLevel: number;
   reverbType: 'room' | 'hall' | 'cave';

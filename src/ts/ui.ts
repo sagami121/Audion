@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fmt, esc } from './utils.js';
 import { setVisualizerColors } from './visualizer.js';
 import { Track } from '../types';
+import { getDominantColor, lightenColor, RGB } from './color.js';
 
 export function updateActive(playlistEl: HTMLElement | null): void {
   if (!playlistEl) return;
@@ -47,10 +48,16 @@ export function updateTrackUI(track: Track): void {
     if (artImg) {
       artImg.src = track.cover;
       artImg.style.display = 'block';
+      artImg.onload = async () => {
+        const color = await getDominantColor(artImg);
+        if (color) {
+          applyThemeColor(color);
+        } else {
+          resetThemeColors();
+        }
+      };
     }
     if (artDefault) artDefault.style.display = 'none';
-
-    resetThemeColors();
   } else {
     if (artImg) artImg.style.display = 'none';
     if (artDefault) artDefault.style.display = 'flex';
@@ -98,11 +105,17 @@ export function createPlaylistRow(
       ${displaySub ? `<span class="pl-sub">${esc(displaySub)}</span>` : ''}
     </div>
     <span class="pl-dur">${track.duration ? fmt(track.duration) : '—'}</span>
+    <button class="pl-fav ${track.favorite ? 'active' : ''}" title="お気に入り">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="${track.favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+      </svg>
+    </button>
     <button class="pl-del" title="削除">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
         <path d="M9 3L3 9M3 3l6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
-    </button>`;
+    </button>
+`;
 
   li.addEventListener('click', (e) => onRowClick(e, globalIdx));
   return li;
@@ -150,23 +163,26 @@ export function setupPlaylistRowEvents(
 
     cmIndex = index;
     
+    const canReorder = state.plView === 'all';
+
     // Disable buttons if move is not possible
     const btnUp = document.getElementById('cmMoveUp');
     const btnDown = document.getElementById('cmMoveDown');
     const btnTop = document.getElementById('cmMoveTop');
     const btnBottom = document.getElementById('cmMoveBottom');
     
-    if (btnUp) (btnUp as HTMLElement).style.opacity = index === 0 ? '0.3' : '1';
-    if (btnUp) (btnUp as HTMLElement).style.pointerEvents = index === 0 ? 'none' : 'auto';
+    if (btnUp) (btnUp as HTMLElement).style.opacity = (!canReorder || index === 0) ? '0.3' : '1';
+    if (btnUp) (btnUp as HTMLElement).style.pointerEvents = (!canReorder || index === 0) ? 'none' : 'auto';
     
-    if (btnTop) (btnTop as HTMLElement).style.opacity = index === 0 ? '0.3' : '1';
-    if (btnTop) (btnTop as HTMLElement).style.pointerEvents = index === 0 ? 'none' : 'auto';
+    if (btnTop) (btnTop as HTMLElement).style.opacity = (!canReorder || index === 0) ? '0.3' : '1';
+    if (btnTop) (btnTop as HTMLElement).style.pointerEvents = (!canReorder || index === 0) ? 'none' : 'auto';
 
-    if (btnDown) (btnDown as HTMLElement).style.opacity = index === state.tracks.length - 1 ? '0.3' : '1';
-    if (btnDown) (btnDown as HTMLElement).style.pointerEvents = index === state.tracks.length - 1 ? 'none' : 'auto';
+    const isLast = index === state.tracks.length - 1;
+    if (btnDown) (btnDown as HTMLElement).style.opacity = (!canReorder || isLast) ? '0.3' : '1';
+    if (btnDown) (btnDown as HTMLElement).style.pointerEvents = (!canReorder || isLast) ? 'none' : 'auto';
 
-    if (btnBottom) (btnBottom as HTMLElement).style.opacity = index === state.tracks.length - 1 ? '0.3' : '1';
-    if (btnBottom) (btnBottom as HTMLElement).style.pointerEvents = index === state.tracks.length - 1 ? 'none' : 'auto';
+    if (btnBottom) (btnBottom as HTMLElement).style.opacity = (!canReorder || isLast) ? '0.3' : '1';
+    if (btnBottom) (btnBottom as HTMLElement).style.pointerEvents = (!canReorder || isLast) ? 'none' : 'auto';
 
     cm.style.display = 'block';
     
@@ -196,17 +212,31 @@ export function renderPlaylist(
 ): void {
   if (!playlistEl) return;
   playlistEl.innerHTML = '';
-  uiTracks.forEach((item, displayIdx) => {
+  
+  const filteredTracks = uiTracks.filter(item => {
+    if (!filter) return true;
     const track = item.track;
-    if (filter && !track.name.toLowerCase().includes(filter.toLowerCase()) &&
-      !(track.artist && track.artist.toLowerCase().includes(filter.toLowerCase()))) {
-      return;
-    }
-    const row = createPlaylistRow(item.globalIdx, displayIdx, track, onRowClick);
+    const f = filter.toLowerCase();
+    return track.name.toLowerCase().includes(f) || 
+           (track.artist && track.artist.toLowerCase().includes(f));
+  });
+
+  filteredTracks.forEach((item, displayIdx) => {
+    const row = createPlaylistRow(item.globalIdx, displayIdx, item.track, onRowClick);
     playlistEl.appendChild(row);
     setupPlaylistRowEvents(row, item.globalIdx);
   });
   updateActive(playlistEl);
+}
+
+function applyThemeColor(c: RGB): void {
+  const root = document.documentElement;
+  const rgb = `${c.r}, ${c.g}, ${c.b}`;
+  root.style.setProperty('--accent-color', `rgb(${rgb})`);
+  root.style.setProperty('--glow-color', `rgba(${rgb}, 0.5)`);
+  
+  const light = lightenColor(c, 1.2);
+  setVisualizerColors(`rgb(${rgb})`, `rgb(${light.r}, ${light.g}, ${light.b})`);
 }
 
 function resetThemeColors(): void {

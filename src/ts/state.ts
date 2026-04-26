@@ -54,6 +54,6 @@ export const state: AppState = {
   delayLevel: saved.delayLevel !== undefined ? saved.delayLevel : 0.3,
   delayTime: saved.delayTime !== undefined ? saved.delayTime : 0.4,
   delayFeedback: saved.delayFeedback !== undefined ? saved.delayFeedback : 0.3,
-  discordRPCEnabled: localStorage.getItem('af_discord_rpc') !== 'false',
+  discordRPCEnabled: localStorage.getItem('af_discord_rpc') === 'true',
   trackStartTime: 0
 };

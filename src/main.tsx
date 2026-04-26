@@ -375,8 +375,17 @@ function updateLyrics(time: number) {
 
 function onPlaylistRowClick(e: any, index: number) {
   if (e.target.closest('.pl-del')) { removeTrack(index); return; }
+  if (e.target.closest('.pl-fav')) { toggleFavorite(index); return; }
   if (state.current === index) togglePlay();
   else loadTrack(index, true);
+}
+
+function toggleFavorite(index: number) {
+  const t = state.tracks[index];
+  if (!t) return;
+  t.favorite = !t.favorite;
+  updatePlaylistUI();
+  player.savePlaylist();
 }
 
 function getPlaylistView(): {track: Track, globalIdx: number}[] {
@@ -386,6 +395,8 @@ function getPlaylistView(): {track: Track, globalIdx: number}[] {
     list.sort((a, b) => b.track.addedAt - a.track.addedAt);
   } else if (state.plView === 'popular') {
     list.sort((a, b) => (b.track.playCount || 0) - (a.track.playCount || 0));
+  } else if (state.plView === 'favorites') {
+    list = list.filter(item => item.track.favorite);
   }
   
   return list;
@@ -432,17 +443,28 @@ function removeTrack(index: number) {
   }
 
   state.tracks.splice(index, 1);
+  
+  if (removingCurrent) {
+    state.current = -1;
+  } else if (state.current > index) {
+    state.current--;
+  }
+
   updatePlaylistUI();
   updateCount();
   player.buildShuffleOrder();
   player.savePlaylist();
-  if (!state.tracks.length) { resetPlayer(); dropHint?.classList.remove('hidden'); return; }
+
+  if (!state.tracks.length) { 
+    resetPlayer(); 
+    dropHint?.classList.remove('hidden'); 
+    return; 
+  }
+
   if (removingCurrent) {
-    state.current = -1;
     const next = Math.min(index, state.tracks.length - 1);
     loadTrack(next, wasPlaying);
-  } else if (state.current > index) {
-    state.current--;
+  } else {
     if (playlist) ui.updateActive(playlist);
   }
 }
@@ -610,9 +632,15 @@ function pauseOnly() {
 
 function playNext() {
   if (!state.tracks.length) return;
+  
+  if (state.repeat === 'none' && !state.shuffle) {
+    if (state.current === state.tracks.length - 1) return;
+  }
+
   let next;
   if (state.shuffle) {
     const pos = state.shuffleOrder.indexOf(state.current);
+    if (state.repeat === 'none' && pos === state.shuffleOrder.length - 1) return;
     next = state.shuffleOrder[(pos + 1) % state.shuffleOrder.length];
   } else {
     next = (state.current + 1) % state.tracks.length;
@@ -623,9 +651,15 @@ function playNext() {
 function playPrev() {
   if (!state.tracks.length) return;
   if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
+
+  if (state.repeat === 'none' && !state.shuffle) {
+    if (state.current === 0) return;
+  }
+
   let prev;
   if (state.shuffle) {
     const pos = state.shuffleOrder.indexOf(state.current);
+    if (state.repeat === 'none' && pos === 0) return;
     prev = state.shuffleOrder[(pos - 1 + state.shuffleOrder.length) % state.shuffleOrder.length];
   } else {
     prev = (state.current - 1 + state.tracks.length) % state.tracks.length;
@@ -743,7 +777,7 @@ async function loadPlaylist() {
 
   if (settings.speed) setSpeed(settings.speed);
 
-  state.showLyrics = settings.showLyrics !== undefined ? settings.showLyrics : true;
+  state.showLyrics = settings.showLyrics !== undefined ? settings.showLyrics : false;
   const lyricsContainer = document.getElementById('lyricsContainer');
   if (lyricsContainer) {
     lyricsContainer.style.display = state.showLyrics ? 'flex' : 'none';

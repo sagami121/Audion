@@ -9,7 +9,8 @@ export function savePlaylist(): void {
   const minimalTracks = state.tracks.map(t => ({
     path: t.path,
     addedAt: t.addedAt,
-    playCount: t.playCount || 0
+    playCount: t.playCount || 0,
+    favorite: t.favorite || false
   }));
   localStorage.setItem('af_playlist', JSON.stringify(minimalTracks));
 }
