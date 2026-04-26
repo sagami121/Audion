@@ -27,5 +27,10 @@ export default defineConfig(() => ({
     sourcemap: !!process.env.TAURI_DEBUG,
     outDir: '../dist',
     emptyOutDir: true,
+    rolldownOptions: {
+      checks: {
+        pluginTimings: false,
+      },
+    },
   },
 }));

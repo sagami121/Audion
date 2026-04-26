@@ -522,7 +522,7 @@ function updateVolIcon() {
   if (!volIcon) return;
   const v = state.muted ? 0 : state.volume;
   if (v === 0) {
-    volIcon.innerHTML = `<img src="${muteIcon}" width="18" height="18" style="filter: brightness(0) invert(0.8); display: block;">`;
+    volIcon.innerHTML = `<img src="${muteIcon}" width="18" height="18" style="display: block;">`;
   } else if (v < 0.3) {
     volIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <path d="M3 6.5H1.5A.5.5 0 001 7v4a.5.5 0 00.5.5H3l4 4v-13L3 6.5z" fill="currentColor"/>

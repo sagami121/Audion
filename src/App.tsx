@@ -38,7 +38,7 @@ const App: React.FC = () => {
             </svg>
           </button>
           <button className="tb-btn tb-settings" id="btnSettings" title="設定">
-            <img src={settingsIcon} alt="Settings" width="16" height="16" style={{ filter: 'brightness(0) invert(0.8)' }} />
+            <img src={settingsIcon} alt="Settings" width="16" height="16" />
           </button>
           <button className="tb-btn tb-min" id="tbMin" title="最小化">
             <svg width="10" height="1" viewBox="0 0 10 1">
@@ -337,7 +337,7 @@ const App: React.FC = () => {
               <span className="repeat-badge" id="repeatBadge" style={{ display: 'none' }}>1</span>
             </button>
             <button className="ctrl-icon" id="btnShowEq" title="オーディオエフェクト" data-i18n-title="audioeffects">
-              <img src={effectsIcon} alt="Audio Effects" width="18" height="18" style={{ filter: 'brightness(0) invert(0.8)' }} />
+              <img src={effectsIcon} alt="Audio Effects" width="18" height="18" />
             </button>
           </div>
 

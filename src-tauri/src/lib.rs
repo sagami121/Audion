@@ -1,4 +1,4 @@
-﻿use std::fs;
+use std::fs;
 use base64::{Engine as _, engine::general_purpose};
 use lofty::prelude::*;
 use lofty::probe::Probe;
@@ -13,6 +13,9 @@ use discord_rpc::{DiscordState, set_discord_presence, clear_discord_presence};
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 use discord_presence::Client;
+#[cfg(target_os = "macos")]
+use window_vibrancy::NSVisualEffectMaterial;
+use window_vibrancy::{apply_blur, apply_mica};
 
 struct AppArgs {
     args: TokioMutex<Vec<String>>,
@@ -620,7 +623,20 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new()
+            .with_shortcuts(["MediaPlayPause", "MediaTrackNext", "MediaTrackPrevious", "MediaStop"]).expect("failed to register media shortcuts")
+            .with_handler(|app, shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    match shortcut.to_string().to_lowercase().as_str() {
+                        "mediaplaypause" | "mediaplay" | "mediapause" => { let _ = app.emit("tray-play-pause", ()); }
+                        "mediatracknext" | "medianexttrack" => { let _ = app.emit("tray-next", ()); }
+                        "mediatrackprevious" | "mediaprevtrack" => { let _ = app.emit("tray-prev", ()); }
+                        "mediastop" => { let _ = app.emit("tray-stop", ()); }
+                        _ => {}
+                    }
+                }
+            })
+            .build())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
@@ -643,6 +659,20 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            let window = app.get_webview_window("main").unwrap();
+
+            #[cfg(target_os = "windows")]
+            {
+                let _ = apply_mica(&window, None);
+                let _ = apply_blur(&window, Some((18, 18, 18, 125)));
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::NSVisualEffectMaterial;
+                let _ = window_vibrancy::apply_vibrancy(&window, NSVisualEffectMaterial::UnderWindowBackground, None, None);
+            }
+
             let state = app.state::<DiscordState>();
             let client_ptr = state.client.clone();
             

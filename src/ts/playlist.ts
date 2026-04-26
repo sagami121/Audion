@@ -173,8 +173,13 @@ export async function loadPlaylist(
     }
   }
 
-  if (settings.lang) updateLanguage(settings.lang);
-  else updateLanguage('ja');
+  if (settings.lang) {
+    updateLanguage(settings.lang);
+  } else {
+    const sysLang = navigator.language.split('-')[0];
+    const defaultLang = ['ja', 'en', 'ko', 'zh'].includes(sysLang) ? sysLang : 'ja';
+    updateLanguage(defaultLang);
+  }
 
   if (settings.theme) setTheme(settings.theme);
   else setTheme('dark');

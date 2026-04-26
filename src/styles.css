@@ -11,48 +11,59 @@
   --titlebar-h: 36px;
   --transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --bg: #1a1a1a;
-  --bg2: #222;
-  --bg3: #2a2a2a;
+  --bg: transparent;
+  --bg2: rgba(30, 30, 30, 0.4);
+  --bg3: rgba(45, 45, 45, 0.4);
   --text: #e0e0e0;
   --text-2: #999;
   --text-3: #666;
-  --primary: #444;
-  --border: #333;
-  --border-h: #444;
-  --sb: rgba(255, 255, 255, 0.1);
-  --sb-h: rgba(255, 255, 255, 0.2);
+  --primary: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-h: rgba(255, 255, 255, 0.15);
+  --sb: rgba(255, 255, 255, 0.05);
+  --sb-h: rgba(255, 255, 255, 0.1);
 
   --accent-color: #a78bfa;
   --glow-color: #38bdf8;
+
+  /* New theme-aware utility variables */
+  --layer-bg: rgba(0, 0, 0, 0.2);
+  --layer-br: rgba(255, 255, 255, 0.05);
+  --icon-filter: brightness(0) invert(0.8);
 }
 
 body.dark-theme {
-  --bg: #1a1a1a;
-  --bg2: #222;
-  --bg3: #2a2a2a;
+  --bg: transparent;
+  --bg2: rgba(30, 30, 30, 0.4);
+  --bg3: rgba(45, 45, 45, 0.4);
   --text: #e0e0e0;
   --text-2: #999;
   --text-3: #666;
-  --primary: #444;
-  --border: #333;
-  --border-h: #444;
-  --sb: rgba(255, 255, 255, 0.1);
-  --sb-h: rgba(255, 255, 255, 0.2);
+  --primary: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-h: rgba(255, 255, 255, 0.15);
+  --sb: rgba(255, 255, 255, 0.05);
+  --sb-h: rgba(255, 255, 255, 0.1);
+  --layer-bg: rgba(0, 0, 0, 0.2);
+  --layer-br: rgba(255, 255, 255, 0.05);
+  --icon-filter: brightness(0) invert(0.8);
 }
 
 body.light-theme {
-  --bg: #f8fafc;
-  --bg2: #ffffff;
-  --bg3: #f1f5f9;
-  --text: #0f172a;
-  --text-2: #475569;
-  --text-3: #94a3b8;
-  --primary: #e2e8f0;
-  --border: #e2e8f0;
-  --border-h: #cbd5e1;
-  --sb: rgba(15, 23, 42, 0.1);
-  --sb-h: rgba(15, 23, 42, 0.2);
+  --bg: rgba(255, 255, 255, 0.75);
+  --bg2: rgba(255, 255, 255, 0.6);
+  --bg3: rgba(220, 220, 220, 0.4);
+  --text: #1a1a1a;
+  --text-2: #444;
+  --text-3: #777;
+  --primary: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.1);
+  --border-h: rgba(0, 0, 0, 0.15);
+  --sb: rgba(0, 0, 0, 0.08);
+  --sb-h: rgba(0, 0, 0, 0.15);
+  --layer-bg: rgba(0, 0, 0, 0.05);
+  --layer-br: rgba(0, 0, 0, 0.08);
+  --icon-filter: brightness(0) invert(0);
 }
 
 html,
@@ -140,8 +151,12 @@ body {
   color: #38bdf8;
 }
 
+.tb-settings img {
+  filter: var(--icon-filter);
+}
+
 .tb-settings:hover img {
-  filter: brightness(0) invert(1) drop-shadow(0 0 2px #38bdf8);
+  filter: brightness(0) invert(0.6) drop-shadow(0 0 2px #38bdf8);
 }
 
 .tb-mini:hover {
@@ -645,7 +660,7 @@ body.mini-view .speed-ctrl {
   margin-top: 0;
   padding: 4px 12px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--primary);
   width: 110px;
 }
 
@@ -717,12 +732,11 @@ body.mini-view .lyrics-container {
   transform: translate(-50%, -50%) scale(0.9);
   width: 90%;
   max-width: 650px;
-  /* Slightly wider */
   height: auto;
   min-height: 320px;
-  background: rgba(22, 22, 22, 0.98);
-  /* Slightly more opaque */
+  background: var(--bg2);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -731,8 +745,8 @@ body.mini-view .lyrics-container {
   pointer-events: none;
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
 }
 
 .eq-overlay.active {
@@ -1119,8 +1133,8 @@ body.mini-view .lyrics-container {
 }
 
 .pl-fav:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  background: var(--primary);
 }
 
 .pl-fav.active {
@@ -1418,6 +1432,10 @@ body.mini-view .lyrics-container {
   color: var(--text);
 }
 
+body.light-theme .ctrl-icon svg {
+  color: #1a1a1a;
+}
+
 .ctrl-icon.active {
   color: var(--bg);
   border-color: var(--accent-color, var(--text));
@@ -1435,7 +1453,7 @@ body.mini-view .lyrics-container {
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--primary);
-  color: #fff;
+  color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1475,6 +1493,7 @@ body.mini-view .lyrics-container {
 .ctrl-icon img {
   transition: filter 0.2s;
   pointer-events: none;
+  filter: var(--icon-filter);
 }
 
 .ctrl-icon:hover img {
@@ -1519,7 +1538,14 @@ body.mini-view .lyrics-container {
 
 .vol-lbl {
   font-size: 0.72rem;
-  color: #fff;
+  color: var(--text-2);
+}
+
+body.light-theme .vol-lbl {
+  color: #1a1a1a;
+}
+
+.volume-section {
   min-width: 38px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -1800,15 +1826,16 @@ body.mini-view .lyrics-container {
 }
 
 .theme-btn.active {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
+  background: #a78bfa;
+  color: #fff;
+  border-color: #a78bfa;
+  font-weight: 700;
   transition: background-color var(--transition), color var(--transition), border-color var(--transition);
 }
 
 #btnEqReset {
   background: var(--bg3);
-  color: #fff;
+  color: var(--text);
   border: 1px solid var(--border);
   font-weight: 700;
   transition: all 0.2s ease;
@@ -1831,14 +1858,14 @@ body.mini-view .lyrics-container {
   font-size: 8px;
   font-weight: 700;
   padding: 1px 4px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.5);
+  background: var(--primary);
+  color: var(--text-3);
   border-radius: 3px;
   margin-left: 6px;
   vertical-align: middle;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   font-family: inherit;
 }
 
@@ -1853,8 +1880,8 @@ body.mini-view .lyrics-container {
   display: flex;
   gap: 4px;
   padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--layer-bg);
+  border-bottom: 1px solid var(--layer-br);
 }
 
 .pl-view-btn {
@@ -1862,7 +1889,7 @@ body.mini-view .lyrics-container {
   padding: 6px 4px;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-3);
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -1872,8 +1899,12 @@ body.mini-view .lyrics-container {
 }
 
 .pl-view-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--primary);
+  color: var(--text);
+}
+
+body.light-theme .play-btn svg {
+  color: #1a1a1a;
 }
 
 .pl-view-btn.active {
@@ -1903,14 +1934,13 @@ body.mini-view .lyrics-container {
 
 .fx-reset-btn {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 13px;
-  line-height: 1;
-  padding: 1px 5px;
+  color: var(--text-2);
+  font-size: 11px;
+  padding: 2px 6px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.2s;
 }
 
 .fx-reset-btn:hover {
@@ -1930,7 +1960,7 @@ body.mini-view .lyrics-container {
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-2);
 }
 
 .fx-row input[type="range"] {
@@ -1944,13 +1974,13 @@ body.mini-view .lyrics-container {
   position: fixed;
   z-index: 10000;
   width: 180px;
-  background: rgba(30, 30, 30, 0.85);
+  background: var(--bg2);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   display: none;
   animation: cm-fade 0.2s ease-out;
 }
@@ -1980,7 +2010,7 @@ body.mini-view .lyrics-container {
 }
 
 .context-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--primary);
 }
 
 .context-menu-item svg {
@@ -1990,6 +2020,6 @@ body.mini-view .lyrics-container {
 
 .context-menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--border);
   margin: 6px 4px;
 }
