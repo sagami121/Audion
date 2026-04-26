@@ -26,11 +26,11 @@ const FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
 export function initVisualizer(audioElement: HTMLAudioElement): void {
   canvas = document.getElementById('visualizerCanvas') as HTMLCanvasElement | null;
-  if (!canvas) return;
-  ctx = canvas.getContext('2d');
-
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
+  if (canvas) {
+    ctx = canvas.getContext('2d');
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+  }
 
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;

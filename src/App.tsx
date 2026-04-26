@@ -142,7 +142,6 @@ const App: React.FC = () => {
         <div className="resizer" id="sidebarResizer"></div>
         <main className="player">
           <div className="art-section">
-            <canvas id="visualizerCanvas" className="visualizer-canvas"></canvas>
             <div className="art-glow" id="artGlow"></div>
             <div className="art-rings">
               <div className="art-ring r1"></div>
