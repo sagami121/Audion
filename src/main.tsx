@@ -9,10 +9,12 @@ import { CONFIG } from './ts/config';
 import { initVisualizer, updateEqGains, updateCompSettings, updateEffectsSettings } from './ts/visualizer';
 import { initUpdater } from './ts/update';
 import { updateDiscordRPC } from './ts/discord';
+import { updateLyrics } from './ts/lyrics';
+import { addPaths as addPathsLogic, getPlaylistView, toggleFavorite, loadPlaylist as loadPlaylistLogic } from './ts/playlist';
+import { updateEqUI as updateEqUILogic, updateCompValuesUI as updateCompValuesUILogic } from './ts/audio-settings';
 import muteIcon from './assets/mute.png';
-import type { Track } from './types';
 
-import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { listen } from '@tauri-apps/api/event';
 import { open as dialogOpen, save as dialogSave } from '@tauri-apps/plugin-dialog';
@@ -126,7 +128,6 @@ let delayFeedback: HTMLInputElement | null = null;
 let btnReverbReset: HTMLButtonElement | null = null;
 let btnDelayReset: HTMLButtonElement | null = null;
 
-const metaCache = new Map();
 let normalSize: LogicalSize | PhysicalSize = new LogicalSize(1000, 660);
 
 async function getAppVersionSafe(): Promise<string> {
@@ -204,68 +205,31 @@ function setSpeed(val: number) {
 }
 
 function updateEqUI() {
-  if (!eqContainer) return;
-
-  populatePresetSelect();
-
-  const activeTabBtn = document.querySelector('.eq-tab-btn.active') as HTMLElement | null;
-  const activeTab = activeTabBtn ? activeTabBtn.dataset.tab : 'eq';
-  let enabled = false;
-  if (activeTab === 'eq') enabled = state.eqEnabled;
-  else if (activeTab === 'comp') enabled = state.compEnabled;
-  else if (activeTab === 'fx') enabled = state.reverbEnabled || state.delayEnabled;
-
-  if (checkEq) checkEq.checked = enabled;
-  const dict = translations[state.lang] || translations.ja;
-  if (eqStatusText) eqStatusText.textContent = enabled ? (dict.eq_on || "ON") : (dict.eq_off || "OFF");
-
-  const hdrCtrl = document.getElementById('eqHeaderControls');
-  if (hdrCtrl) {
-    hdrCtrl.style.display = activeTab === 'fx' ? 'none' : 'flex';
-  }
-
-  eqSliders?.forEach((slider, i) => {
-    slider.value = state.eqGains[i].toString();
-    const animBar = slider.parentElement?.querySelector('.eq-bar-anim') as HTMLElement | null;
-    if (animBar) {
-      const h = ((state.eqGains[i] + 12) / 24) * 140;
-      animBar.style.height = `${h}px`;
-    }
-  });
-
-  if (compThreshold) compThreshold.value = state.compSettings.threshold.toString();
-  if (compKnee) compKnee.value = state.compSettings.knee.toString();
-  if (compRatio) compRatio.value = state.compSettings.ratio.toString();
-  if (compAttack) compAttack.value = state.compSettings.attack.toString();
-  if (compRelease) compRelease.value = state.compSettings.release.toString();
-  if (compMakeup) compMakeup.value = state.compSettings.makeup.toString();
-
-  if (checkReverb) checkReverb.checked = state.reverbEnabled;
-  if (reverbLevel) reverbLevel.value = state.reverbLevel.toString();
-  if (reverbType) reverbType.value = state.reverbType;
-  
-  if (checkDelay) checkDelay.checked = state.delayEnabled;
-  if (delayLevel) delayLevel.value = state.delayLevel.toString();
-  if (delayTime) delayTime.value = state.delayTime.toString();
-  if (delayFeedback) delayFeedback.value = state.delayFeedback.toString();
-
-  updateCompValuesUI();
-
-  updateEqGains(state.eqGains, state.eqEnabled);
-  updateCompSettings(state.compSettings, state.compEnabled);
-  updateEffectsSettings(
-    { enabled: state.reverbEnabled, level: state.reverbLevel, type: state.reverbType },
-    { enabled: state.delayEnabled, level: state.delayLevel, time: state.delayTime, feedback: state.delayFeedback }
+  updateEqUILogic(
+    eqContainer,
+    populatePresetSelect,
+    checkEq,
+    eqStatusText,
+    eqSliders,
+    compThreshold,
+    compKnee,
+    compRatio,
+    compAttack,
+    compRelease,
+    compMakeup,
+    checkReverb,
+    reverbLevel,
+    reverbType,
+    checkDelay,
+    delayLevel,
+    delayTime,
+    delayFeedback,
+    updateCompValuesUI
   );
 }
 
 function updateCompValuesUI() {
-  if (valThreshold) valThreshold.textContent = `${state.compSettings.threshold} dB`;
-  if (valKnee) valKnee.textContent = `${state.compSettings.knee} dB`;
-  if (valRatio) valRatio.textContent = `${state.compSettings.ratio.toFixed(1)}:1`;
-  if (valAttack) valAttack.textContent = `${Math.round(state.compSettings.attack * 1000)} ms`;
-  if (valRelease) valRelease.textContent = `${Math.round(state.compSettings.release * 1000)} ms`;
-  if (valMakeup) valMakeup.textContent = `${state.compSettings.makeup} dB`;
+  updateCompValuesUILogic(valThreshold, valKnee, valRatio, valAttack, valRelease, valMakeup);
 }
 
 function updateVolBarUI() {
@@ -309,97 +273,22 @@ async function toggleMiniMode() {
   }
 }
 
-async function loadLyrics(path: string) {
-  state.lyrics = [];
-  state.currentLyricIndex = -1;
-  if (lyricsInner) lyricsInner.innerHTML = '';
-
-  try {
-    if (invoke) {
-      const lrc: string = await invoke('get_lyrics', { path });
-      const lines = lrc.split('\n');
-      const timeReg = /\[(\d+):(\d+\.\d+)\]/;
-
-      state.lyrics = lines.map(line => {
-        const match = timeReg.exec(line);
-        if (match) {
-          const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
-          const text = line.replace(timeReg, '').trim();
-          return { time, text };
-        }
-        return null;
-      }).filter((l: any): l is { time: number; text: string } => !!(l && l.text));
-
-      state.lyrics.forEach((l, i) => {
-        const div = document.createElement('div');
-        div.className = 'lyric-line';
-        div.textContent = l.text;
-        div.dataset.index = i.toString();
-        lyricsInner?.appendChild(div);
-      });
-    }
-  } catch (e) {
-    const dict = translations[state.lang] || translations.ja;
-    if (lyricsInner) lyricsInner.innerHTML = `<div class="lyric-line" style="opacity:0.5">${dict.no_lyrics}</div>`;
-  }
-}
-
-function updateLyrics(time: number) {
-  if (!state.lyrics.length || !lyricsInner) return;
-
-  let index = -1;
-  for (let i = 0; i < state.lyrics.length; i++) {
-    if (time >= state.lyrics[i].time) {
-      index = i;
-    } else {
-      break;
-    }
-  }
-
-  if (index !== state.currentLyricIndex) {
-    state.currentLyricIndex = index;
-    const lines = lyricsInner.querySelectorAll('.lyric-line') as NodeListOf<HTMLElement>;
-    lines.forEach((line, i) => {
-      line.classList.toggle('active', i === index);
-    });
-
-    if (index !== -1 && lines[index]) {
-      const activeLine = lines[index];
-      if (lyricsInner.parentElement) {
-        const offset = lyricsInner.parentElement.clientHeight / 2 - activeLine.offsetTop - activeLine.clientHeight / 2;
-        lyricsInner.style.transform = `translateY(${offset}px)`;
-      }
-    }
-  }
-}
-
 function onPlaylistRowClick(e: any, index: number) {
   if (e.target.closest('.pl-del')) { removeTrack(index); return; }
-  if (e.target.closest('.pl-fav')) { toggleFavorite(index); return; }
-  if (state.current === index) togglePlay();
-  else loadTrack(index, true);
-}
-
-function toggleFavorite(index: number) {
-  const t = state.tracks[index];
-  if (!t) return;
-  t.favorite = !t.favorite;
-  updatePlaylistUI();
-  player.savePlaylist();
-}
-
-function getPlaylistView(): {track: Track, globalIdx: number}[] {
-  let list = state.tracks.map((track, globalIdx) => ({ track, globalIdx }));
-  
-  if (state.plView === 'recent') {
-    list.sort((a, b) => b.track.addedAt - a.track.addedAt);
-  } else if (state.plView === 'popular') {
-    list.sort((a, b) => (b.track.playCount || 0) - (a.track.playCount || 0));
-  } else if (state.plView === 'favorites') {
-    list = list.filter(item => item.track.favorite);
+  if (e.target.closest('.pl-fav')) { 
+    toggleFavorite(index, updatePlaylistUI);
+    return; 
   }
-  
-  return list;
+  if (state.current === index) togglePlayWrapper();
+  else loadTrackWrapper(index, true);
+}
+
+function togglePlayWrapper() {
+  player.togglePlay(audio, albumArt, vinylCenter, artGlow, playlist, loadTrackWrapper);
+}
+
+function loadTrackWrapper(index: number, autoplay = false) {
+  player.loadTrack(index, autoplay, audio, albumArt, vinylCenter, artGlow, playlist, lyricsInner, syncMediaSession);
 }
 
 function updatePlaylistUI() {
@@ -430,7 +319,6 @@ function removeTrack(index: number) {
   const removingCurrent = state.current === index;
   const wasPlaying = !!audio ? !audio.paused && !audio.ended : state.playing;
 
-  // Stop the currently loaded stream first so a deleted file cannot continue playing.
   if (removingCurrent && audio) {
     audio.pause();
     audio.removeAttribute('src');
@@ -463,7 +351,7 @@ function removeTrack(index: number) {
 
   if (removingCurrent) {
     const next = Math.min(index, state.tracks.length - 1);
-    loadTrack(next, wasPlaying);
+    loadTrackWrapper(next, wasPlaying);
   } else {
     if (playlist) ui.updateActive(playlist);
   }
@@ -474,101 +362,12 @@ function updateCount() {
   if (plCount) plCount.textContent = `${state.tracks.length}${dict.tracks_count || ' 曲'}`;
 }
 
-async function addPaths(paths: any[], isInitial = false) {
-  let added = 0;
-  let skipped = 0;
-  const normalizePath = (p: string) => p.replace(/\\/g, '/');
-
-  for (const item of paths) {
-    const isObj = typeof item === 'object';
-    const pathValue = isObj ? item.path : item;
-    const addedAt = isObj && item.addedAt ? item.addedAt : Date.now();
-    const playCount = isObj && item.playCount ? item.playCount : 0;
-
-    const normPath = normalizePath(pathValue).toLowerCase();
-    if (state.tracks.some(t => normalizePath(t.path).toLowerCase() === normPath)) {
-      skipped++;
-      continue;
-    }
-    try {
-      let meta: any;
-      if (metaCache.has(pathValue)) {
-        meta = metaCache.get(pathValue);
-      } else {
-        if (!invoke) continue;
-        meta = await invoke('get_file_metadata', { path: pathValue });
-        metaCache.set(pathValue, meta);
-      }
-
-      if (meta) {
-        state.tracks.push({
-          path: pathValue,
-          name: meta.name,
-          artist: meta.artist,
-          album: meta.album,
-          cover: meta.cover,
-          duration: meta.duration || 0,
-          addedAt,
-          playCount
-        });
-
-        const idx = state.tracks.length - 1;
-        const filter = plSearch?.value.toLowerCase() || "";
-        const track = state.tracks[idx];
-        const matchesFilter = !filter ||
-          track.name.toLowerCase().includes(filter) ||
-          (track.artist && track.artist.toLowerCase().includes(filter));
-
-        if (state.plView === 'all' && matchesFilter && playlist) {
-          const displayIdx = playlist.childElementCount;
-          const row = ui.createPlaylistRow(idx, displayIdx, track, onPlaylistRowClick);
-          playlist.appendChild(row);
-          ui.setupPlaylistRowEvents(row, idx);
-        }
-        added++;
-      }
-    } catch (e) {
-      console.warn('Failed to add', pathValue, e);
-    }
-  }
-  updateCount();
-  if (added > 0) {
-    if (state.plView !== 'all') updatePlaylistUI();
-    const dict = translations[state.lang] || translations.ja;
-    if (dropHint) dropHint.classList.add('hidden');
-    if (!isInitial) {
-      let msg = `${added}${dict.toast_added}`;
-      if (skipped) msg += ` (${skipped}${dict.toast_skipped})`;
-      showToast(msg);
-    }
-    if (!isInitial && state.current === -1) loadTrack(0, false);
-    player.savePlaylist();
-  } else if (skipped > 0 && !isInitial) {
-    showToast(translations[state.lang].toast_all_skipped);
-  }
-  player.buildShuffleOrder();
+async function addPathsWrapper(paths: any[], isInitial = false) {
+  await addPathsLogic(paths, isInitial, playlist, plSearch, dropHint, onPlaylistRowClick, updateCount, loadTrackWrapper);
 }
 
 function loadTrack(index: number, autoplay = false) {
-  if (index < 0 || index >= state.tracks.length) return;
-  state.current = index;
-  const t = state.tracks[index];
-  if (audio) {
-    audio.src = convertFileSrc(t.path);
-    audio.load();
-  }
-  ui.updateTrackUI(t);
-  if (playlist) ui.updateActive(playlist);
-  vinylCenter?.classList.remove('show');
-  albumArt?.classList.remove('spinning');
-  albumArt?.classList.remove('paused');
-  artGlow?.classList.remove('active');
-
-  loadLyrics(t.path);
-
-  if (autoplay && audio) player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
-  else ui.updatePlayUI(false);
-  syncMediaSession();
+  loadTrackWrapper(index, autoplay);
 }
 
 function resetPlayer() {
@@ -601,13 +400,7 @@ function toggleMute() {
 }
 
 function togglePlay() {
-  const dict = translations[state.lang] || translations.ja;
-  if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
-  if (state.current === -1) { loadTrack(0, true); return; }
-  if (audio) {
-    state.playing ? player.pauseAudio(audio, albumArt, playlist) : player.playAudio(audio, albumArt, vinylCenter, artGlow, playlist);
-    syncMediaSession();
-  }
+  togglePlayWrapper();
 }
 
 function playOnly() {
@@ -631,57 +424,19 @@ function pauseOnly() {
 }
 
 function playNext() {
-  if (!state.tracks.length) return;
-  
-  if (state.repeat === 'none' && !state.shuffle) {
-    if (state.current === state.tracks.length - 1) return;
-  }
-
-  let next;
-  if (state.shuffle) {
-    const pos = state.shuffleOrder.indexOf(state.current);
-    if (state.repeat === 'none' && pos === state.shuffleOrder.length - 1) return;
-    next = state.shuffleOrder[(pos + 1) % state.shuffleOrder.length];
-  } else {
-    next = (state.current + 1) % state.tracks.length;
-  }
-  loadTrack(next, true);
+  player.playNext(loadTrackWrapper);
 }
 
 function playPrev() {
-  if (!state.tracks.length) return;
-  if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
-
-  if (state.repeat === 'none' && !state.shuffle) {
-    if (state.current === 0) return;
-  }
-
-  let prev;
-  if (state.shuffle) {
-    const pos = state.shuffleOrder.indexOf(state.current);
-    if (state.repeat === 'none' && pos === 0) return;
-    prev = state.shuffleOrder[(pos - 1 + state.shuffleOrder.length) % state.shuffleOrder.length];
-  } else {
-    prev = (state.current - 1 + state.tracks.length) % state.tracks.length;
-  }
-  loadTrack(prev, true);
+  player.playPrev(audio, loadTrackWrapper);
 }
 
 function toggleShuffle() {
-  state.shuffle = !state.shuffle;
-  if (state.shuffle) player.buildShuffleOrder();
-  if (shuffleBtn) shuffleBtn.classList.toggle('active', state.shuffle);
-  saveSettings();
+  player.toggleShuffle(shuffleBtn, saveSettings);
 }
 
 function toggleRepeat() {
-  if (state.repeat === 'none') state.repeat = 'all';
-  else if (state.repeat === 'all') state.repeat = 'one';
-  else state.repeat = 'none';
-
-  if (repeatBtn) repeatBtn.classList.toggle('active', state.repeat !== 'none');
-  if (repeatBadge) repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
-  saveSettings();
+  player.toggleRepeat(repeatBtn, repeatBadge, saveSettings);
 }
 
 function populatePresetSelect() {
@@ -725,90 +480,21 @@ function applyEqPreset(presetName: string) {
 }
 
 async function loadPlaylist() {
-  state.restoreSession = localStorage.getItem('af_restore_session') !== 'false';
-  if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
-
-  if (state.restoreSession) {
-    const stored = localStorage.getItem('af_playlist');
-    if (stored) {
-      try {
-        const storedItems = JSON.parse(stored);
-        if (storedItems.length) {
-          const items = storedItems.map((item: any) => 
-            typeof item === 'string' ? { path: item, addedAt: Date.now(), playCount: 0 } : item
-          );
-          await addPaths(items, true);
-        }
-      } catch (e) { console.error('Load failed', e); }
-    }
-  }
-
-  state.alwaysOnTop = localStorage.getItem('af_on_top') === 'true';
-  if (checkOnTop) checkOnTop.checked = state.alwaysOnTop;
-  const appWindow = getCurrentWebviewWindow();
-  if (appWindow && (appWindow as any).setAlwaysOnTop) {
-    (appWindow as any).setAlwaysOnTop(state.alwaysOnTop);
-  }
-
-  const settingsStr = localStorage.getItem('af_settings');
-  const settings = settingsStr ? JSON.parse(settingsStr) : {};
-
-  if (shuffleBtn) shuffleBtn.classList.toggle('active', state.shuffle);
-  if (repeatBtn) repeatBtn.classList.toggle('active', state.repeat !== 'none');
-  if (repeatBadge) repeatBadge.style.display = state.repeat === 'one' ? 'flex' : 'none';
-
-  if (state.restoreSession && settings.current !== undefined && state.tracks[settings.current]) {
-    loadTrack(settings.current, false);
-    if (settings.currentTime && audio) {
-      const curAudio = audio;
-      const restoreTime = () => {
-        curAudio.currentTime = settings.currentTime;
-        curAudio.removeEventListener('loadedmetadata', restoreTime);
-      };
-      curAudio.addEventListener('loadedmetadata', restoreTime);
-    }
-  }
-
-  if (settings.lang) updateLanguage(settings.lang);
-  else updateLanguage('ja');
-
-  if (settings.theme) setTheme(settings.theme);
-  else setTheme('dark');
-
-  if (settings.speed) setSpeed(settings.speed);
-
-  state.showLyrics = settings.showLyrics !== undefined ? settings.showLyrics : false;
-  const lyricsContainer = document.getElementById('lyricsContainer');
-  if (lyricsContainer) {
-    lyricsContainer.style.display = state.showLyrics ? 'flex' : 'none';
-  }
-
-  state.eqEnabled = settings.eqEnabled || false;
-  state.eqGains = settings.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-  state.compEnabled = settings.compEnabled || false;
-  state.compSettings = settings.compSettings || {
-    threshold: -24,
-    knee: 30,
-    ratio: 12,
-    attack: 0.003,
-    release: 0.25,
-    makeup: 0
-  };
-
-  if (settings.volume !== undefined) {
-    state.volume = settings.volume;
-    if (audio) audio.volume = state.volume;
-  }
-  if (settings.muted !== undefined) state.muted = settings.muted;
-  updateVolBarUI();
-
-  updateEqUI();
-
-  const savedW = localStorage.getItem('af_sidebar_w');
-  if (savedW) {
-    document.documentElement.style.setProperty('--sidebar-w', savedW);
-  }
+  await loadPlaylistLogic(
+    checkRestoreSession,
+    checkOnTop,
+    shuffleBtn,
+    repeatBtn,
+    repeatBadge,
+    loadTrackWrapper,
+    audio,
+    updateLanguage,
+    setTheme,
+    setSpeed,
+    updateVolBarUI,
+    updateEqUI,
+    addPathsWrapper
+  );
 }
 
 function saveSettings() {
@@ -1532,7 +1218,7 @@ function setupLegacyLogic() {
       if (Array.isArray(tracks)) {
         const paths = tracks.map((t: any) => t.path).filter((p: any) => !!p);
         if (paths.length) {
-          await addPaths(paths);
+          await addPathsWrapper(paths);
           showToast(`${paths.length}${dict.toast_loaded}`);
         }
       } else {
@@ -1554,7 +1240,7 @@ function setupLegacyLogic() {
       });
       if (!files) return;
       const paths = Array.isArray(files) ? files : [files];
-      await addPaths(paths);
+      await addPathsWrapper(paths);
     } catch (e) {
       console.error(e);
       showToast(dict.toast_error_open);
@@ -1575,7 +1261,7 @@ function setupLegacyLogic() {
       const paths = (entries as any[])
         .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name))
         .map(e => `${normalizedFolder}${e.name}`);
-      if (paths.length) await addPaths(paths);
+      if (paths.length) await addPathsWrapper(paths);
       else showToast(dict.toast_error_none);
     } catch (e) {
       console.error(e);
@@ -1704,7 +1390,7 @@ async function setupDragDrop() {
       const { paths } = event.payload;
       if (paths && paths.length) {
         const musicPaths = paths.filter((p: string) => /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(p));
-        if (musicPaths.length) await addPaths(musicPaths);
+        if (musicPaths.length) await addPathsWrapper(musicPaths);
         else showToast(translations[state.lang].toast_error_generic);
       }
     });
@@ -1887,7 +1573,7 @@ if (rootEl) {
             if (seekThumb) seekThumb.style.left = pct + '%';
             if (curTime) curTime.textContent = fmt(audio.currentTime);
           }
-          updateLyrics(audio.currentTime);
+          updateLyrics(audio.currentTime, lyricsInner);
         }
       });
       audio.addEventListener('ended', () => {
@@ -1961,7 +1647,7 @@ if (rootEl) {
         const filtered = paths.filter(p => !p.endsWith('.exe') && p.includes('.'));
         if (filtered.length > 0) {
           const oldLength = state.tracks.length;
-          await addPaths(filtered);
+          await addPathsWrapper(filtered);
           if (state.tracks.length > oldLength) {
             loadTrack(oldLength, true);
             const win = getCurrentWebviewWindow();
