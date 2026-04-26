@@ -15,7 +15,33 @@
   ![Downloads (Total)](https://img.shields.io/github/downloads/sagami121/Audion/total?style=for-the-badge&color=9370DB&label=total%20downloads)
 </div>
 
----
+## Audionについて
+
+Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイヤーです。
+
+- 対応フォーマット:
+  <p>
+    <img src="https://img.shields.io/badge/MP3-444?style=flat-square">
+    <img src="https://img.shields.io/badge/WAV-444?style=flat-square">
+    <img src="https://img.shields.io/badge/FLAC-444?style=flat-square">
+    <img src="https://img.shields.io/badge/M4A-444?style=flat-square">
+    <img src="https://img.shields.io/badge/OGG-444?style=flat-square">
+    <img src="https://img.shields.io/badge/OPUS-444?style=flat-square">
+    <img src="https://img.shields.io/badge/AIFF-444?style=flat-square">
+  </p>
+- インストーラー配布: `.msi`, `.exe`
+- ライセンス: [MIT License](LICENSE)
+
+## Deep Link
+
+### AudionはDeep Linkに対応しています。
+
+### 対応リンク
+
+- `audion://home`
+- `audion://settings`
+- `audion://reports`
+
 
 ## スクリーンショット
 
@@ -43,25 +69,6 @@
   <h3>アプリの更新通知</h3>
   <img src="docs/7.png" width="400" alt="アプリの更新通知" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 </div>
-
----
-
-## Audionについて
-
-Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイヤーです。
-
-- 対応フォーマット:
-  <p>
-    <img src="https://img.shields.io/badge/MP3-444?style=flat-square">
-    <img src="https://img.shields.io/badge/WAV-444?style=flat-square">
-    <img src="https://img.shields.io/badge/FLAC-444?style=flat-square">
-    <img src="https://img.shields.io/badge/M4A-444?style=flat-square">
-    <img src="https://img.shields.io/badge/OGG-444?style=flat-square">
-    <img src="https://img.shields.io/badge/OPUS-444?style=flat-square">
-    <img src="https://img.shields.io/badge/AIFF-444?style=flat-square">
-  </p>
-- インストーラー配布: `.msi`, `.exe`
-- ライセンス: [MIT License](LICENSE)
 
 ---
 
