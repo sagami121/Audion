@@ -82,6 +82,10 @@ export const translations: Translations = {
     show_lyrics: "歌詞を表示する",
     save_settings: "設定を保存",
     toast_settings_saved: "設定を保存しました",
+    setting_general: "一般",
+    setting_appearance: "外観",
+    setting_other: "その他",
+    version: "バージョン",
     check_update: "アップデートを確認",
     lyrics: "歌詞",
     no_lyrics: "歌詞が見つかりません",
@@ -138,7 +142,10 @@ export const translations: Translations = {
     move_top: "一番上へ",
     move_bottom: "一番下へ",
     fx_reset: "リセット",
-    discord_rpc: "再生中の曲を Discord に表示する"
+    discord_rpc: "再生中の曲を Discord に表示する",
+    pl_pos: "再生リストの位置",
+    pl_left: "左",
+    pl_right: "右"
   },
   en: {
     app_title: "Audion — Music Player",
@@ -215,6 +222,10 @@ export const translations: Translations = {
     show_lyrics: "Show Lyrics",
     save_settings: "Save Settings",
     toast_settings_saved: "Settings saved",
+    setting_general: "General",
+    setting_appearance: "Appearance",
+    setting_other: "Other",
+    version: "Version",
     lyrics: "Lyrics",
     no_lyrics: "No lyrics found",
     audioeffects: "Audio Effects",
@@ -270,7 +281,10 @@ export const translations: Translations = {
     move_top: "Move to Top",
     move_bottom: "Move to Bottom",
     fx_reset: "Reset",
-    discord_rpc: "Show playback on Discord"
+    discord_rpc: "Show playback on Discord",
+    pl_pos: "Playlist Position",
+    pl_left: "Left",
+    pl_right: "Right"
   },
   ko: {
     app_title: "Audion — 음악 플레이어",
@@ -347,6 +361,10 @@ export const translations: Translations = {
     show_lyrics: "가사 표시",
     save_settings: "설정 저장",
     toast_settings_saved: "설정이 저장되었습니다",
+    setting_general: "일반",
+    setting_appearance: "모양",
+    setting_other: "기타",
+    version: "버전",
     lyrics: "가사",
     no_lyrics: "가사를 찾을 수 없습니다",
     audioeffects: "오디오 효과",
@@ -403,7 +421,10 @@ export const translations: Translations = {
     move_top: "맨 위로",
     move_bottom: "맨 아래로",
     fx_reset: "초기화",
-    discord_rpc: "Discord에 현재 곡 표시"
+    discord_rpc: "Discord에 현재 곡 표시",
+    pl_pos: "재생 목록 위치",
+    pl_left: "왼쪽",
+    pl_right: "오른쪽"
   },
 
   zh: {
@@ -481,6 +502,10 @@ export const translations: Translations = {
     show_lyrics: "显示歌词",
     save_settings: "保存设置",
     toast_settings_saved: "设置已保存",
+    setting_general: "常规",
+    setting_appearance: "外观",
+    setting_other: "其它",
+    version: "版本",
     lyrics: "歌词",
     no_lyrics: "未找到歌词",
     audioeffects: "音频效果",
@@ -536,6 +561,9 @@ export const translations: Translations = {
     move_top: "移到顶部",
     move_bottom: "移到底部",
     fx_reset: "重置",
-    discord_rpc: "在 Discord 上显示当前歌曲"
+    discord_rpc: "在 Discord 上显示当前歌曲",
+    pl_pos: "播放列表位置",
+    pl_left: "左",
+    pl_right: "右"
   }
 };

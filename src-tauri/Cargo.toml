@@ -1,6 +1,6 @@
 [package]
 name = "Audion"
-version = "1.0.0"
+version = "1.0.1"
 description = "Audion — Music Player"
 authors = ["Audion"]
 edition = "2021"

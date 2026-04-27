@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 
 audion-worker.js
+GEMINI.md
 
 *.vscode
 

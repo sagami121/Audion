@@ -66,6 +66,8 @@ let speedLbl: HTMLSpanElement | null = null;
 let langSelect: HTMLSelectElement | null = null;
 let btnThemeDark: HTMLButtonElement | null = null;
 let btnThemeLight: HTMLButtonElement | null = null;
+let opacitySlider: HTMLInputElement | null = null;
+let opacityLbl: HTMLSpanElement | null = null;
 
 let tbMin: HTMLButtonElement | null = null;
 let tbMax: HTMLButtonElement | null = null;
@@ -84,7 +86,8 @@ let bugModal: HTMLDivElement | null = null;
 let btnCloseBug: HTMLButtonElement | null = null;
 let btnSubmitBug: HTMLButtonElement | null = null;
 let bugTitle: HTMLInputElement | null = null;
-let bugCategory: HTMLSelectElement | null = null;
+let bugCategory: HTMLInputElement | null = null;
+let bugNavBtns: NodeListOf<HTMLButtonElement> | null = null;
 let bugDesc: HTMLTextAreaElement | null = null;
 let bugError: HTMLDivElement | null = null;
 
@@ -99,6 +102,9 @@ let eqSliders: NodeListOf<HTMLInputElement> | null = null;
 
 let eqTabBtns: NodeListOf<HTMLButtonElement> | null = null;
 let tabContents: NodeListOf<HTMLDivElement> | null = null;
+
+let settingsNavBtns: NodeListOf<HTMLButtonElement> | null = null;
+let settingsSections: NodeListOf<HTMLDivElement> | null = null;
 
 let compThreshold: HTMLInputElement | null = null;
 let compKnee: HTMLInputElement | null = null;
@@ -128,7 +134,150 @@ let delayFeedback: HTMLInputElement | null = null;
 let btnReverbReset: HTMLButtonElement | null = null;
 let btnDelayReset: HTMLButtonElement | null = null;
 
+let sidebarContextMenu: HTMLDivElement | null = null;
+let cmPosLeft: HTMLDivElement | null = null;
+let cmPosRight: HTMLDivElement | null = null;
+
 let normalSize: LogicalSize | PhysicalSize = new LogicalSize(1000, 660);
+
+// UI Opacity (0.0 – 1.0). Default matches the original CSS default of 1.0
+let uiOpacityValue: number = parseFloat(localStorage.getItem('af_ui_opacity') || '1.0');
+
+function applyUiOpacity(value: number) {
+  document.documentElement.style.setProperty('--ui-bg-alpha', value.toFixed(3));
+}
+
+function setUiOpacity(value: number) {
+  uiOpacityValue = Math.max(0, Math.min(1, value));
+  applyUiOpacity(uiOpacityValue);
+  localStorage.setItem('af_ui_opacity', uiOpacityValue.toString());
+  const pct = Math.round(uiOpacityValue * 100);
+  if (opacityLbl) opacityLbl.textContent = `${pct}%`;
+  if (opacitySlider) opacitySlider.value = pct.toString();
+}
+
+// ---- Custom Select Dropdown ----
+function buildCustomSelect(select: HTMLSelectElement) {
+  const wrapper = select.closest('.custom-select') as HTMLDivElement | null;
+  if (!wrapper) return;
+  const triggerText = wrapper.querySelector('.cs-trigger-text') as HTMLSpanElement | null;
+  const dropdown = wrapper.querySelector('.cs-dropdown') as HTMLDivElement | null;
+  if (!triggerText || !dropdown) return;
+
+  dropdown.innerHTML = '';
+  Array.from(select.options).forEach((opt, i) => {
+    const item = document.createElement('div');
+    item.className = 'cs-option' + (i === select.selectedIndex ? ' selected' : '');
+    item.textContent = opt.textContent || opt.value;
+    item.dataset.index = String(i);
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      select.selectedIndex = i;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      buildCustomSelect(select);
+      closeCustomSelect(wrapper);
+    });
+    dropdown.appendChild(item);
+  });
+  const sel = select.options[select.selectedIndex];
+  if (triggerText && sel) triggerText.textContent = sel.textContent || sel.value;
+}
+
+function closeCustomSelect(wrapper: HTMLDivElement) {
+  const trigger = wrapper.querySelector('.cs-trigger');
+  const dropdown = wrapper.querySelector('.cs-dropdown');
+  trigger?.classList.remove('open');
+  dropdown?.classList.remove('open');
+}
+
+function initCustomSelects() {
+  document.querySelectorAll('select.select-input').forEach(sel => {
+    const select = sel as HTMLSelectElement;
+    if (select.parentElement?.classList.contains('custom-select')) return;
+
+    // Detect small selects by inline font-size
+    const isSmall = select.style.fontSize && parseFloat(select.style.fontSize) <= 12;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select' + (isSmall ? ' cs-sm' : '');
+    // Transfer flex/width inline style to wrapper
+    if (select.style.flex) wrapper.style.flex = select.style.flex;
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'cs-trigger';
+
+    const triggerText = document.createElement('span');
+    triggerText.className = 'cs-trigger-text';
+
+    const triggerArrow = document.createElement('span');
+    triggerArrow.className = 'cs-arrow';
+    triggerArrow.innerHTML = `<svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+    trigger.appendChild(triggerText);
+    trigger.appendChild(triggerArrow);
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'cs-dropdown';
+
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(dropdown);
+
+    select.parentNode?.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.style.display = 'none';
+
+    // Toggle open/close
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.contains('open');
+      // Close all other dropdowns first
+      document.querySelectorAll('.cs-dropdown.open').forEach(d => {
+        const w = d.closest('.custom-select') as HTMLDivElement | null;
+        if (w) closeCustomSelect(w);
+      });
+      if (!isOpen) {
+        dropdown.classList.add('open');
+        trigger.classList.add('open');
+      }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', () => closeCustomSelect(wrapper));
+
+    // Mouse wheel: cycle through options without opening dropdown
+    trigger.addEventListener('wheel', (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const len = select.options.length;
+      if (!len) return;
+      let idx = select.selectedIndex;
+      if (e.deltaY < 0) idx = Math.max(0, idx - 1);
+      else idx = Math.min(len - 1, idx + 1);
+      if (idx !== select.selectedIndex) {
+        select.selectedIndex = idx;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        buildCustomSelect(select);
+      }
+    }, { passive: false });
+
+    // Sync when select.value is set programmatically (intercept setter)
+    const proto = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!;
+    Object.defineProperty(select, 'value', {
+      get: () => proto.get!.call(select),
+      set: (v: string) => {
+        proto.set!.call(select, v);
+        buildCustomSelect(select);
+      },
+      configurable: true
+    });
+
+    // Observe option changes (dynamic population like eqPresetsSelect)
+    new MutationObserver(() => buildCustomSelect(select)).observe(select, { childList: true, subtree: true });
+
+    buildCustomSelect(select);
+  });
+}
 
 async function getAppVersionSafe(): Promise<string> {
   try {
@@ -162,6 +311,9 @@ function setTheme(theme: string) {
 
   btnThemeDark?.classList.toggle('active', theme === 'dark');
   btnThemeLight?.classList.toggle('active', theme === 'light');
+
+  // Re-apply opacity since theme change resets --ui-bg-alpha in class
+  applyUiOpacity(uiOpacityValue);
 
   saveSettings();
 }
@@ -202,6 +354,27 @@ function setSpeed(val: number) {
   if (speedLbl) speedLbl.textContent = `${val.toFixed(1)}x`;
   if (speedSlider) speedSlider.value = val.toString();
   saveSettings();
+}
+
+function setPlaylistPosition(pos: 'left' | 'right') {
+  state.playlistPosition = pos;
+  const app = document.querySelector('.app');
+  if (app) {
+    app.classList.remove('pl-left', 'pl-right');
+    app.classList.add(`pl-${pos}`);
+  }
+  saveSettings();
+}
+
+function hideSidebarContextMenu() {
+  if (sidebarContextMenu) {
+    sidebarContextMenu.classList.remove('active');
+    setTimeout(() => {
+      if (sidebarContextMenu && !sidebarContextMenu.classList.contains('active')) {
+        sidebarContextMenu.style.display = 'none';
+      }
+    }, 200);
+  }
 }
 
 function updateEqUI() {
@@ -513,6 +686,7 @@ function saveSettings() {
     eqGains: state.eqGains,
     compEnabled: state.compEnabled,
     compSettings: state.compSettings,
+    playlistPosition: state.playlistPosition
   };
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
@@ -678,8 +852,8 @@ function setupLegacyLogic() {
 
   document.addEventListener('mousemove', (e: MouseEvent) => {
     if (!isResizing) return;
-    const newWidth = e.clientX;
-    if (newWidth >= 200 && newWidth <= 500) {
+    const newWidth = state.playlistPosition === 'left' ? e.clientX : window.innerWidth - e.clientX;
+    if (newWidth >= 200 && newWidth <= 600) {
       document.documentElement.style.setProperty('--sidebar-w', `${newWidth}px`);
     }
   });
@@ -701,7 +875,22 @@ function setupLegacyLogic() {
     if (langSelect) langSelect.value = state.lang;
     btnThemeDark?.classList.toggle('active', state.theme === 'dark');
     btnThemeLight?.classList.toggle('active', state.theme === 'light');
+
+    // Reset to general tab
+    settingsNavBtns?.forEach(b => b.classList.toggle('active', b.dataset.tab === 'general'));
+    settingsSections?.forEach(s => s.classList.toggle('active', s.id === 'settings-general'));
+
     settingsModal?.classList.add('active');
+  });
+
+  settingsNavBtns?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      settingsNavBtns?.forEach(b => b.classList.toggle('active', b === btn));
+      settingsSections?.forEach(section => {
+        section.classList.toggle('active', section.id === `settings-${tabId}`);
+      });
+    });
   });
   btnCloseSettings?.addEventListener('click', () => settingsModal?.classList.remove('active'));
   settingsModal?.addEventListener('click', (e: MouseEvent) => { if (e.target === settingsModal) settingsModal?.classList.remove('active'); });
@@ -756,17 +945,30 @@ function setupLegacyLogic() {
   btnReportBug?.addEventListener('click', () => {
     settingsModal?.classList.remove('active');
     clearBugError();
+    // Reset to bug category
+    bugNavBtns?.forEach(b => b.classList.toggle('active', b.dataset.category === 'bug'));
+    if (bugCategory) bugCategory.value = 'bug';
     bugModal?.classList.add('active');
+  });
+
+  bugNavBtns?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.category || 'bug';
+      bugNavBtns?.forEach(b => b.classList.toggle('active', b === btn));
+      if (bugCategory) bugCategory.value = cat;
+    });
   });
 
   btnCloseBug?.addEventListener('click', () => {
     clearBugError();
     bugModal?.classList.remove('active');
+    settingsModal?.classList.add('active');
   });
   bugModal?.addEventListener('click', (e: MouseEvent) => {
     if (e.target === bugModal) {
       clearBugError();
       bugModal?.classList.remove('active');
+      settingsModal?.classList.add('active');
     }
   });
 
@@ -812,6 +1014,7 @@ function setupLegacyLogic() {
         bugDesc.value = '';
         bugCategory.value = 'bug';
         bugModal?.classList.remove('active');
+        settingsModal?.classList.add('active');
       } else {
         showToast(dict.toast_error_generic);
       }
@@ -846,6 +1049,17 @@ function setupLegacyLogic() {
     btnThemeDark?.classList.remove('active');
   });
 
+  opacitySlider?.addEventListener('input', (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value);
+    setUiOpacity(val / 100);
+  });
+
+  // Sync opacity slider value when settings modal opens
+  btnSettings?.addEventListener('click', () => {
+    if (opacitySlider) opacitySlider.value = Math.round(uiOpacityValue * 100).toString();
+    if (opacityLbl) opacityLbl.textContent = `${Math.round(uiOpacityValue * 100)}%`;
+  }, { capture: true });
+
   document.querySelectorAll('select.select-input').forEach(el => {
     const sel = el as HTMLSelectElement;
     sel.addEventListener('wheel', (e: WheelEvent) => {
@@ -867,6 +1081,29 @@ function setupLegacyLogic() {
   btnMiniMode?.addEventListener('click', () => {
     toggleMiniMode();
   });
+
+  const sidebar = document.getElementById('sidebar');
+  sidebar?.addEventListener('contextmenu', (e: MouseEvent) => {
+    // Only show if NOT clicking on a playlist item (handled by ui.ts)
+    if ((e.target as HTMLElement).closest('.pl-item')) return;
+    
+    e.preventDefault();
+    if (sidebarContextMenu) {
+      sidebarContextMenu.style.display = 'block';
+      sidebarContextMenu.style.left = `${e.clientX}px`;
+      sidebarContextMenu.style.top = `${e.clientY}px`;
+      sidebarContextMenu.classList.add('active');
+    }
+  });
+
+  document.addEventListener('click', (e: MouseEvent) => {
+    if (sidebarContextMenu && !sidebarContextMenu.contains(e.target as Node)) {
+      hideSidebarContextMenu();
+    }
+  });
+
+  cmPosLeft?.addEventListener('click', () => { setPlaylistPosition('left'); hideSidebarContextMenu(); });
+  cmPosRight?.addEventListener('click', () => { setPlaylistPosition('right'); hideSidebarContextMenu(); });
 
   playBtn?.addEventListener('click', () => {
     togglePlay();
@@ -1494,6 +1731,8 @@ if (rootEl) {
     langSelect = document.getElementById('langSelect') as HTMLSelectElement | null;
     btnThemeDark = document.getElementById('btnThemeDark') as HTMLButtonElement | null;
     btnThemeLight = document.getElementById('btnThemeLight') as HTMLButtonElement | null;
+    opacitySlider = document.getElementById('opacitySlider') as HTMLInputElement | null;
+    opacityLbl = document.getElementById('opacityLbl') as HTMLSpanElement | null;
 
     tbMin = document.getElementById('tbMin') as HTMLButtonElement | null;
     tbMax = document.getElementById('tbMax') as HTMLButtonElement | null;
@@ -1512,7 +1751,8 @@ if (rootEl) {
     btnCloseBug = document.getElementById('btnCloseBug') as HTMLButtonElement | null;
     btnSubmitBug = document.getElementById('btnSubmitBug') as HTMLButtonElement | null;
     bugTitle = document.getElementById('bugTitle') as HTMLInputElement | null;
-    bugCategory = document.getElementById('bugCategory') as HTMLSelectElement | null;
+    bugCategory = document.getElementById('bugCategory') as HTMLInputElement | null;
+    bugNavBtns = document.querySelectorAll('.bug-nav-btn') as NodeListOf<HTMLButtonElement>;
     bugDesc = document.getElementById('bugDesc') as HTMLTextAreaElement | null;
     bugError = document.getElementById('bugError') as HTMLDivElement | null;
 
@@ -1527,6 +1767,9 @@ if (rootEl) {
 
     eqTabBtns = document.querySelectorAll('.eq-tab-btn') as NodeListOf<HTMLButtonElement>;
     tabContents = document.querySelectorAll('.tab-content') as NodeListOf<HTMLDivElement>;
+
+    settingsNavBtns = document.querySelectorAll('.settings-nav-btn') as NodeListOf<HTMLButtonElement>;
+    settingsSections = document.querySelectorAll('.settings-section') as NodeListOf<HTMLDivElement>;
 
     compThreshold = document.getElementById('compThreshold') as HTMLInputElement | null;
     compKnee = document.getElementById('compKnee') as HTMLInputElement | null;
@@ -1555,6 +1798,10 @@ if (rootEl) {
     delayFeedback = document.getElementById('delayFeedback') as HTMLInputElement | null;
     btnReverbReset = document.getElementById('btnReverbReset') as HTMLButtonElement | null;
     btnDelayReset = document.getElementById('btnDelayReset') as HTMLButtonElement | null;
+
+    sidebarContextMenu = document.getElementById('sidebarContextMenu') as HTMLDivElement | null;
+    cmPosLeft = document.getElementById('cmPosLeft') as HTMLDivElement | null;
+    cmPosRight = document.getElementById('cmPosRight') as HTMLDivElement | null;
 
     if (audio) {
       audio.volume = state.volume;
@@ -1596,6 +1843,12 @@ if (rootEl) {
     updateVolBarUI();
     player.buildShuffleOrder();
 
+    // Apply saved opacity
+    setUiOpacity(uiOpacityValue);
+
+    // Init custom dropdowns
+    initCustomSelects();
+
     state.version = await getAppVersionSafe();
     console.log("Audion Version Initialized:", state.version);
     if (verEl) verEl.textContent = state.version;
@@ -1632,12 +1885,42 @@ if (rootEl) {
         const lowerUrl = url.toLowerCase().replace(/\/$/, '');
         console.log("Processing URL:", lowerUrl);
 
-        if (lowerUrl.includes('audion://settings') || lowerUrl.startsWith('audion:settings')) {
-          console.log("Matched settings link");
-          btnSettings?.click();
-        } else if (lowerUrl.includes('audion://report') || lowerUrl.startsWith('audion:report')) {
-          console.log("Matched report link");
-          btnReportBug?.click();
+        // Map of paths to tab IDs
+        const tabMap: Record<string, string> = {
+          'audion://settings/general': 'general',
+          'audion://settings/appearance': 'appearance',
+          'audion://settings/other': 'other',
+          'audion://settings/version': 'version',
+          'audion://version': 'version',
+          'audion://settings': 'general',
+          'audion://report': 'other' // Maps report to 'other' where the bug button is
+        };
+
+        let targetTab = '';
+        for (const [prefix, tabId] of Object.entries(tabMap)) {
+          if (lowerUrl.includes(prefix)) {
+            targetTab = tabId;
+            break;
+          }
+        }
+
+        if (targetTab) {
+          // Open settings if not open, or just switch tab if already open
+          if (!settingsModal?.classList.contains('active')) {
+            btnSettings?.click();
+          }
+          
+          // Switch to target tab
+          setTimeout(() => {
+            const targetBtn = Array.from(settingsNavBtns || []).find(b => b.dataset.tab === targetTab);
+            if (targetBtn) {
+              targetBtn.click();
+              // If it's a report link, also trigger the report bug button
+              if (lowerUrl.includes('audion://report')) {
+                btnReportBug?.click();
+              }
+            }
+          }, 100);
         }
       });
     }

@@ -186,6 +186,18 @@ export async function loadPlaylist(
 
   if (settings.speed) setSpeed(settings.speed);
 
+  if (settings.playlistPosition) {
+    state.playlistPosition = settings.playlistPosition;
+    const app = document.querySelector('.app');
+    if (app) {
+      app.classList.remove('pl-left', 'pl-right');
+      app.classList.add(`pl-${state.playlistPosition}`);
+    }
+  }
+
+  const savedW = localStorage.getItem('af_sidebar_w');
+  if (savedW) document.documentElement.style.setProperty('--sidebar-w', savedW);
+
   state.showLyrics = settings.showLyrics !== undefined ? settings.showLyrics : false;
   const lyricsContainer = document.getElementById('lyricsContainer');
   if (lyricsContainer) {

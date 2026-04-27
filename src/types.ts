@@ -61,4 +61,5 @@ export interface AppState {
   delayFeedback: number;
   discordRPCEnabled: boolean;
   trackStartTime: number;
+  playlistPosition: 'left' | 'right';
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import settingsIcon from './assets/settings.png';
 import effectsIcon from './assets/audioeffects.png';
+import appIcon from './assets/app_icon.jpg';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -58,7 +59,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="app">
+      <div className={`app pl-${localStorage.getItem('af_settings') ? JSON.parse(localStorage.getItem('af_settings') || '{}').playlistPosition || 'left' : 'left'}`}>
         <aside className="sidebar" id="sidebar">
           <div className="sidebar-inner">
             <div className="add-bar">
@@ -381,104 +382,162 @@ const App: React.FC = () => {
       </div>
 
       <div className="modal-overlay" id="settingsModal">
-        <div className="modal-card">
+        <div className="modal-card settings-card">
           <div className="modal-hdr">
             <h3 data-i18n="settings">設定</h3>
             <button className="modal-close" id="btnCloseSettings">&times;</button>
           </div>
-          <div className="modal-body">
-            <div className="setting-item">
-              <label className="setting-lbl">
-                <span data-i18n="always_on_top">ウインドウを常に手前に表示</span>
-                <input type="checkbox" id="checkOnTop" />
-              </label>
-            </div>
-            <div className="setting-item">
-              <label className="setting-lbl">
-                <span data-i18n="restore_session">起動時に前回の状態を復元する</span>
-                <input type="checkbox" id="checkRestoreSession" />
-              </label>
-            </div>
-            <div className="setting-item">
-              <label className="setting-lbl">
-                <span data-i18n="show_lyrics">歌詞を表示する</span>
-                <input type="checkbox" id="checkShowLyrics" />
-              </label>
-            </div>
-            <div className="setting-item">
-              <label className="setting-lbl">
-                <span data-i18n="discord_rpc">Discord Rich Presence</span>
-                <input type="checkbox" id="checkDiscordRPC" />
-              </label>
-            </div>
-            <div className="setting-divider"></div>
-            <div className="setting-item">
-              <label className="form-group">
-                <span data-i18n="theme">テーマ</span>
-                <div className="theme-toggle-wrap" style={{ marginTop: '8px' }}>
-                  <button className="theme-btn" id="btnThemeDark" data-theme="dark" data-i18n="theme_dark">ダーク</button>
-                  <button className="theme-btn" id="btnThemeLight" data-theme="light" data-i18n="theme_light">ライト</button>
+          <div className="settings-layout">
+            <aside className="settings-sidebar">
+              <button className="settings-nav-btn active" data-tab="general">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                <span data-i18n="setting_general">一般</span>
+              </button>
+              <button className="settings-nav-btn" data-tab="appearance">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z"></path></svg>
+                <span data-i18n="setting_appearance">外観</span>
+              </button>
+              <button className="settings-nav-btn" data-tab="other">
+                <img src={settingsIcon} width="18" height="18" style={{ flexShrink: 0, opacity: 0.8, filter: 'brightness(0) invert(1)' }} alt="Settings" />
+                <span data-i18n="setting_other">その他</span>
+              </button>
+              <button className="settings-nav-btn" data-tab="version">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span data-i18n="version">バージョン</span>
+              </button>
+            </aside>
+            <div className="settings-content">
+              <div className="settings-section active" id="settings-general">
+                <div className="setting-item">
+                  <label className="setting-lbl">
+                    <span data-i18n="always_on_top">ウインドウを常に手前に表示</span>
+                    <input type="checkbox" id="checkOnTop" />
+                  </label>
                 </div>
-              </label>
+                <div className="setting-item">
+                  <label className="setting-lbl">
+                    <span data-i18n="restore_session">起動時に前回の状態を復元する</span>
+                    <input type="checkbox" id="checkRestoreSession" />
+                  </label>
+                </div>
+                <div className="setting-item">
+                  <label className="setting-lbl">
+                    <span data-i18n="show_lyrics">歌詞を表示する</span>
+                    <input type="checkbox" id="checkShowLyrics" />
+                  </label>
+                </div>
+                <div className="setting-item">
+                  <label className="setting-lbl">
+                    <span data-i18n="discord_rpc">Discord Rich Presence</span>
+                    <input type="checkbox" id="checkDiscordRPC" />
+                  </label>
+                </div>
+              </div>
+
+              <div className="settings-section" id="settings-appearance">
+                <div className="setting-item">
+                  <label className="form-group">
+                    <span data-i18n="theme">テーマ</span>
+                    <div className="theme-toggle-wrap" style={{ marginTop: '8px' }}>
+                      <button className="theme-btn" id="btnThemeDark" data-theme="dark" data-i18n="theme_dark">ダーク</button>
+                      <button className="theme-btn" id="btnThemeLight" data-theme="light" data-i18n="theme_light">ライト</button>
+                    </div>
+                  </label>
+                </div>
+                <div className="setting-item">
+                  <label className="form-group">
+                    <span data-i18n="language">言語</span>
+                    <select id="langSelect" className="select-input" style={{ marginTop: '8px' }}>
+                      <option value="ja">日本語</option>
+                      <option value="en">English</option>
+                      <option value="ko">한국어</option>
+                      <option value="zh">简体中文</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="setting-item">
+                  <label className="form-group">
+                    <div className="opacity-row">
+                      <span data-i18n="ui_opacity">UI透明度</span>
+                      <span className="opacity-lbl-val" id="opacityLbl">40%</span>
+                    </div>
+                    <input type="range" id="opacitySlider" min="0" max="100" step="1" defaultValue="40" />
+                  </label>
+                </div>
+              </div>
+
+              <div className="settings-section" id="settings-other">
+                <button className="btn-secondary" id="btnReportBug" style={{ width: '100%', marginBottom: '12px' }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
+                    <path d="M8 11v.01M8 8V5m7 3a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <span data-i18n="report_bug">不具合を報告する</span>
+                </button>
+              </div>
+
+              <div className="settings-section" id="settings-version">
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ marginBottom: '15px' }}>
+                    <img src={appIcon} width="64" height="64" style={{ borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }} alt="App Icon" />
+                  </div>
+                  <h4 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>Audion</h4>
+                  <p className="version-text" style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 20px 0' }}>Version <span id="appVersion">0.0.0</span></p>
+                  
+                  <button className="btn-secondary" id="btnCheckUpdate" style={{ width: '100%' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span data-i18n="check_update">アップデートを確認</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="setting-item">
-              <label className="form-group">
-                <span data-i18n="language">言語</span>
-                <select id="langSelect" className="select-input" style={{ marginTop: '8px' }}>
-                  <option value="ja">日本語</option>
-                  <option value="en">English</option>
-                  <option value="ko">한국어</option>
-                  <option value="zh">简体中文</option>
-                </select>
-              </label>
-            </div>
-            <div className="setting-divider"></div>
-            <button className="btn-primary" id="btnSaveSettings" style={{ width: '100%', marginBottom: '15px' }} data-i18n="save_settings">設定を保存</button>
-            <div className="setting-item">
-              <button className="btn-secondary" id="btnCheckUpdate" style={{ width: '100%', marginBottom: '12px' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
-                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span data-i18n="check_update">アップデートを確認</span>
-              </button>
-              <button className="btn-secondary" id="btnReportBug">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
-                  <path d="M8 11v.01M8 8V5m7 3a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <span data-i18n="report_bug">不具合を報告する</span>
-              </button>
-            </div>
-            <p className="version-text" style={{ fontSize: '10px', opacity: 0.5, marginTop: '10px', textAlign: 'center' }}>Ver <span id="appVersion">0.0.0</span></p>
+          </div>
+          <div className="modal-footer">
+            <button className="btn-primary" id="btnSaveSettings" style={{ width: '100%' }} data-i18n="save_settings">設定を保存</button>
           </div>
         </div>
       </div>
 
       <div className="modal-overlay" id="bugModal">
-        <div className="modal-card">
+        <div className="modal-card bug-card">
           <div className="modal-hdr">
-            <h3 data-i18n="bug_report_title">不具合を報告</h3>
+            <h3 data-i18n="bug_report_title">フィードバック</h3>
             <button className="modal-close" id="btnCloseBug">&times;</button>
           </div>
-          <div className="modal-body">
-            <div className="form-group">
-              <label htmlFor="bugCategory" data-i18n="feedback_category">カテゴリー</label>
-              <select id="bugCategory" className="select-input">
-                <option value="bug" data-i18n="category_bug">不具合報告</option>
-                <option value="request" data-i18n="category_request">要望・改善案</option>
-                <option value="other" data-i18n="category_other">その他</option>
-              </select>
+          <div className="bug-layout">
+            <aside className="bug-sidebar">
+              <button className="bug-nav-btn active" data-category="bug">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                <span data-i18n="category_bug">不具合報告</span>
+              </button>
+              <button className="bug-nav-btn" data-category="request">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
+                <span data-i18n="category_request">要望・要望</span>
+              </button>
+              <button className="bug-nav-btn" data-category="other">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+                <span data-i18n="category_other">その他</span>
+              </button>
+              <input type="hidden" id="bugCategory" value="bug" />
+            </aside>
+            <div className="bug-content">
+              <div className="form-group">
+                <label htmlFor="bugTitle" data-i18n="bug_form_title">件名</label>
+                <input type="text" id="bugTitle" placeholder="不具合の要約" data-i18n-placeholder="bug_form_placeholder_title" className="form-input" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="bugDesc" data-i18n="bug_form_desc">詳細</label>
+                <textarea id="bugDesc" placeholder="発生手順や期待される動作など..." data-i18n-placeholder="bug_form_placeholder_desc" className="form-input" rows={6} style={{ resize: 'none' }}></textarea>
+              </div>
+              <div className="form-error" id="bugError" hidden></div>
             </div>
-            <div className="form-group">
-              <label htmlFor="bugTitle" data-i18n="bug_form_title">件名</label>
-              <input type="text" id="bugTitle" placeholder="不具合の要約" data-i18n-placeholder="bug_form_placeholder_title" className="form-input" />
+          </div>
+          <div className="modal-footer">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+              <p className="setting-hint" style={{ fontSize: '11px', opacity: 0.6, margin: 0 }} data-i18n="bug_hint">※開発者に報告内容が送信されます</p>
+              <button className="btn-primary" id="btnSubmitBug" style={{ minWidth: '120px' }} data-i18n="bug_submit">送信する</button>
             </div>
-            <div className="form-group">
-              <label htmlFor="bugDesc" data-i18n="bug_form_desc">詳細</label>
-              <textarea id="bugDesc" placeholder="発生手順や期待される動作など..." data-i18n-placeholder="bug_form_placeholder_desc" className="form-input" rows={5}></textarea>
-            </div>
-            <div className="form-error" id="bugError" hidden></div>
-            <button className="btn-primary" id="btnSubmitBug" style={{ width: '100%', marginTop: '10px' }} data-i18n="bug_submit">送信する</button>
-            <p className="setting-hint" style={{ marginTop: '15px' }} data-i18n="bug_hint">※開発者に報告内容が送信されます</p>
           </div>
         </div>
       </div>
@@ -547,6 +606,25 @@ const App: React.FC = () => {
             <path d="M7 13l5 5 5-5M7 6l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <span data-i18n="move_bottom">一番下へ</span>
+        </div>
+      </div>
+
+      <div className="context-menu" id="sidebarContextMenu">
+        <div className="context-menu-label" data-i18n="pl_pos">再生リストの位置</div>
+        <div className="context-menu-divider"></div>
+        <div className="context-menu-item" id="cmPosLeft">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+            <path d="M9 3v18" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+          <span data-i18n="pl_left">左</span>
+        </div>
+        <div className="context-menu-item" id="cmPosRight">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+            <path d="M15 3v18" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+          <span data-i18n="pl_right">右</span>
         </div>
       </div>
     </>

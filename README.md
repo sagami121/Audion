@@ -40,8 +40,11 @@ Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイ
 
 - `audion://home`
 - `audion://settings`
+- `audion://settings/general`
+- `audion://settings/appearance`
+- `audion://settings/other`
+- `audion://settings/version`
 - `audion://report`
-
 
 ## スクリーンショット
 
