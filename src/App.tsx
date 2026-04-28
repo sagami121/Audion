@@ -398,7 +398,7 @@ const App: React.FC = () => {
                 <span data-i18n="setting_appearance">外観</span>
               </button>
               <button className="settings-nav-btn" data-tab="other">
-                <img src={settingsIcon} width="18" height="18" style={{ flexShrink: 0, opacity: 0.8, filter: 'brightness(0) invert(1)' }} alt="Settings" />
+                <img src={settingsIcon} width="18" height="18" style={{ flexShrink: 0, opacity: 0.8, filter: 'var(--icon-filter)' }} alt="Settings" />
                 <span data-i18n="setting_other">その他</span>
               </button>
               <button className="settings-nav-btn" data-tab="feedback">
@@ -582,7 +582,7 @@ const App: React.FC = () => {
             <button className="modal-close" id="btnCloseReleaseNotes">&times;</button>
           </div>
           <div className="modal-body">
-            <div className="release-notes-content" id="releaseNotesContent" style={{ whiteSpace: 'pre-wrap', fontSize: '13px', lineHeight: 1.6, maxHeight: '300px', overflowY: 'auto', color: 'var(--text-color)', marginBottom: '15px', padding: '10px', background: 'rgba(0,0,0,0.1)', borderRadius: '6px' }}></div>
+            <div className="release-notes-content" id="releaseNotesContent" style={{ whiteSpace: 'pre-wrap', fontSize: '13px', lineHeight: 1.6, maxHeight: '300px', overflowY: 'auto', color: 'var(--text)', marginBottom: '15px', padding: '10px', background: 'rgba(0,0,0,0.1)', borderRadius: '6px' }}></div>
             <button className="btn-primary" id="btnReleaseNotesOk" style={{ width: '100%' }}>OK</button>
           </div>
         </div>

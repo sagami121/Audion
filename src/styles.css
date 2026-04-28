@@ -233,7 +233,7 @@ body {
   padding: 10px 16px;
   border: none;
   background: none;
-  color: var(--text-color);
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -282,7 +282,7 @@ body {
   padding: 10px 16px;
   border: none;
   background: none;
-  color: var(--text-color);
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
