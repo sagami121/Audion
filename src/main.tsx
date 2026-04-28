@@ -6,6 +6,35 @@ import * as player from './ts/player';
 import * as ui from './ts/ui';
 import { translations } from './ts/translations';
 import { CONFIG } from './ts/config';
+
+// Log collection logic
+const logs: string[] = [];
+const MAX_LOGS = 500;
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+function formatLog(args: any[], level: string) {
+  const time = new Date().toLocaleTimeString();
+  const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  return `[${time}] [${level}] ${msg}`;
+}
+
+console.log = (...args) => {
+  logs.push(formatLog(args, 'LOG'));
+  if (logs.length > MAX_LOGS) logs.shift();
+  originalLog.apply(console, args);
+};
+console.error = (...args) => {
+  logs.push(formatLog(args, 'ERROR'));
+  if (logs.length > MAX_LOGS) logs.shift();
+  originalError.apply(console, args);
+};
+console.warn = (...args) => {
+  logs.push(formatLog(args, 'WARN'));
+  if (logs.length > MAX_LOGS) logs.shift();
+  originalWarn.apply(console, args);
+};
 import { initVisualizer, updateEqGains, updateCompSettings, updateEffectsSettings } from './ts/visualizer';
 import { initUpdater } from './ts/update';
 import { updateDiscordRPC } from './ts/discord';
@@ -81,9 +110,13 @@ let checkOnTop: HTMLInputElement | null = null;
 let checkRestoreSession: HTMLInputElement | null = null;
 let checkShowLyrics: HTMLInputElement | null = null;
 let checkDiscordRPC: HTMLInputElement | null = null;
-let btnReportBug: HTMLButtonElement | null = null;
-let bugModal: HTMLDivElement | null = null;
-let btnCloseBug: HTMLButtonElement | null = null;
+let checkHwAccel: HTMLInputElement | null = null;
+let btnViewLogs: HTMLButtonElement | null = null;
+let btnResetSettings: HTMLButtonElement | null = null;
+let logModal: HTMLDivElement | null = null;
+let btnCloseLogs: HTMLButtonElement | null = null;
+let btnClearLogs: HTMLButtonElement | null = null;
+let logArea: HTMLTextAreaElement | null = null;
 let btnSubmitBug: HTMLButtonElement | null = null;
 let bugTitle: HTMLInputElement | null = null;
 let bugCategory: HTMLInputElement | null = null;
@@ -872,6 +905,7 @@ function setupLegacyLogic() {
     if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
     if (checkShowLyrics) checkShowLyrics.checked = state.showLyrics;
     if (checkDiscordRPC) checkDiscordRPC.checked = state.discordRPCEnabled;
+    if (checkHwAccel) checkHwAccel.checked = localStorage.getItem('af_hw_accel') !== 'false';
     if (langSelect) langSelect.value = state.lang;
     btnThemeDark?.classList.toggle('active', state.theme === 'dark');
     btnThemeLight?.classList.toggle('active', state.theme === 'light');
@@ -924,6 +958,12 @@ function setupLegacyLogic() {
       updateDiscordRPC();
     }
 
+    if (checkHwAccel) {
+      const enabled = checkHwAccel.checked;
+      localStorage.setItem('af_hw_accel', enabled.toString());
+      invoke('set_hw_accel_enabled', { enabled });
+    }
+
     const selectedTheme = btnThemeDark?.classList.contains('active') ? 'dark' : 'light';
     if (selectedTheme !== state.theme) {
       needsThemeUpdate = true;
@@ -942,13 +982,30 @@ function setupLegacyLogic() {
     showToast(dict.toast_settings_saved || "設定を保存しました");
   });
 
-  btnReportBug?.addEventListener('click', () => {
-    settingsModal?.classList.remove('active');
-    clearBugError();
-    // Reset to bug category
-    bugNavBtns?.forEach(b => b.classList.toggle('active', b.dataset.category === 'bug'));
-    if (bugCategory) bugCategory.value = 'bug';
-    bugModal?.classList.add('active');
+  btnResetSettings?.addEventListener('click', () => {
+    const dict = translations[state.lang] || translations.ja;
+    if (confirm(dict.setting_reset_confirm || "Reset settings?")) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  });
+
+  btnViewLogs?.addEventListener('click', () => {
+    if (logArea) logArea.value = logs.join('\n');
+    logModal?.classList.add('active');
+  });
+
+  btnCloseLogs?.addEventListener('click', () => {
+    logModal?.classList.remove('active');
+  });
+
+  btnClearLogs?.addEventListener('click', () => {
+    logs.length = 0;
+    if (logArea) logArea.value = '';
+  });
+
+  logModal?.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === logModal) logModal?.classList.remove('active');
   });
 
   bugNavBtns?.forEach(btn => {
@@ -957,19 +1014,6 @@ function setupLegacyLogic() {
       bugNavBtns?.forEach(b => b.classList.toggle('active', b === btn));
       if (bugCategory) bugCategory.value = cat;
     });
-  });
-
-  btnCloseBug?.addEventListener('click', () => {
-    clearBugError();
-    bugModal?.classList.remove('active');
-    settingsModal?.classList.add('active');
-  });
-  bugModal?.addEventListener('click', (e: MouseEvent) => {
-    if (e.target === bugModal) {
-      clearBugError();
-      bugModal?.classList.remove('active');
-      settingsModal?.classList.add('active');
-    }
   });
 
   btnSubmitBug?.addEventListener('click', async () => {
@@ -1013,8 +1057,7 @@ function setupLegacyLogic() {
         bugTitle.value = '';
         bugDesc.value = '';
         bugCategory.value = 'bug';
-        bugModal?.classList.remove('active');
-        settingsModal?.classList.add('active');
+        // Success! Maybe switch back to general or just stay
       } else {
         showToast(dict.toast_error_generic);
       }
@@ -1746,9 +1789,14 @@ if (rootEl) {
     checkRestoreSession = document.getElementById('checkRestoreSession') as HTMLInputElement | null;
     checkShowLyrics = document.getElementById('checkShowLyrics') as HTMLInputElement | null;
     checkDiscordRPC = document.getElementById('checkDiscordRPC') as HTMLInputElement | null;
-    btnReportBug = document.getElementById('btnReportBug') as HTMLButtonElement | null;
-    bugModal = document.getElementById('bugModal') as HTMLDivElement | null;
-    btnCloseBug = document.getElementById('btnCloseBug') as HTMLButtonElement | null;
+    checkHwAccel = document.getElementById('checkHwAccel') as HTMLInputElement | null;
+    btnViewLogs = document.getElementById('btnViewLogs') as HTMLButtonElement | null;
+    btnResetSettings = document.getElementById('btnResetSettings') as HTMLButtonElement | null;
+    logModal = document.getElementById('logModal') as HTMLDivElement | null;
+    btnCloseLogs = document.getElementById('btnCloseLogs') as HTMLButtonElement | null;
+    btnClearLogs = document.getElementById('btnClearLogs') as HTMLButtonElement | null;
+    logArea = document.getElementById('logArea') as HTMLTextAreaElement | null;
+
     btnSubmitBug = document.getElementById('btnSubmitBug') as HTMLButtonElement | null;
     bugTitle = document.getElementById('bugTitle') as HTMLInputElement | null;
     bugCategory = document.getElementById('bugCategory') as HTMLInputElement | null;
@@ -1893,7 +1941,8 @@ if (rootEl) {
           'audion://settings/version': 'version',
           'audion://version': 'version',
           'audion://settings': 'general',
-          'audion://report': 'other' // Maps report to 'other' where the bug button is
+          'audion://settings/feedback': 'feedback',
+          'audion://report': 'feedback'
         };
 
         let targetTab = '';
@@ -1915,10 +1964,6 @@ if (rootEl) {
             const targetBtn = Array.from(settingsNavBtns || []).find(b => b.dataset.tab === targetTab);
             if (targetBtn) {
               targetBtn.click();
-              // If it's a report link, also trigger the report bug button
-              if (lowerUrl.includes('audion://report')) {
-                btnReportBug?.click();
-              }
             }
           }, 100);
         }

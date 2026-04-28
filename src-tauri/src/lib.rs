@@ -611,8 +611,40 @@ fn run_installer(app: AppHandle, path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn set_hw_accel_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let path = app.path().app_config_dir().map_err(|e| e.to_string())?.join("disable_gpu");
+    if enabled {
+        if path.exists() {
+            fs::remove_file(path).map_err(|e| e.to_string())?;
+        }
+    } else {
+        if !path.parent().unwrap().exists() {
+            fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
+        }
+        fs::write(path, "1").map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+fn is_hw_accel_disabled() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(app_data) = std::env::var("APPDATA") {
+            let path = std::path::Path::new(&app_data).join("com.sagami121.audion").join("disable_gpu");
+            return path.exists();
+        }
+    }
+    false
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if is_hw_accel_disabled() {
+        std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--disable-gpu");
+        println!("Hardware acceleration disabled via flag file.");
+    }
+
     tauri::Builder::default()
         .manage(AppArgs {
             args: TokioMutex::new(std::env::args().skip(1).collect()), // Skip exe path
@@ -792,7 +824,8 @@ pub fn run() {
             download_installer,
             run_installer,
             set_discord_presence,
-            clear_discord_presence
+            clear_discord_presence,
+            set_hw_accel_enabled
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

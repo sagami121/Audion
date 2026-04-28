@@ -401,6 +401,10 @@ const App: React.FC = () => {
                 <img src={settingsIcon} width="18" height="18" style={{ flexShrink: 0, opacity: 0.8, filter: 'brightness(0) invert(1)' }} alt="Settings" />
                 <span data-i18n="setting_other">その他</span>
               </button>
+              <button className="settings-nav-btn" data-tab="feedback">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.5 8.5 0 0 1 4.7 1.4L21 4.5z"></path></svg>
+                <span data-i18n="setting_feedback">フィードバック</span>
+              </button>
               <button className="settings-nav-btn" data-tab="version">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 <span data-i18n="version">バージョン</span>
@@ -467,12 +471,68 @@ const App: React.FC = () => {
               </div>
 
               <div className="settings-section" id="settings-other">
-                <button className="btn-secondary" id="btnReportBug" style={{ width: '100%', marginBottom: '12px' }}>
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginRight: '6px' }}>
-                    <path d="M8 11v.01M8 8V5m7 3a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <span data-i18n="report_bug">不具合を報告する</span>
-                </button>
+                <div className="setting-item">
+                  <button className="btn-secondary" id="btnViewLogs" style={{ width: '100%', marginBottom: '12px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span data-i18n="setting_view_logs">ログを表示</span>
+                  </button>
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-lbl">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span data-i18n="setting_hw_accel">ハードウェアアクセラレーション</span>
+                      <span className="setting-hint" style={{ textAlign: 'left', marginTop: '0', fontSize: '10px' }} data-i18n="setting_hw_accel_hint">※変更を反映するにはアプリの再起動が必要です</span>
+                    </div>
+                    <input type="checkbox" id="checkHwAccel" />
+                  </label>
+                </div>
+
+                <div className="setting-divider"></div>
+
+                <div className="setting-item">
+                  <button className="btn-secondary" id="btnResetSettings" style={{ width: '100%', color: '#ff8a80', borderColor: 'rgba(255, 138, 128, 0.3)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                    <span data-i18n="setting_reset">設定を初期化</span>
+                  </button>
+                </div>
+
+                <p style={{ opacity: 0.6, fontSize: '11px', textAlign: 'center', padding: '20px 0' }} data-i18n="auto_save_hint">※設定は自動的に保存されます</p>
+              </div>
+
+              <div className="settings-section" id="settings-feedback">
+                <div className="bug-layout">
+                  <aside className="bug-sidebar">
+                    <button className="bug-nav-btn active" data-category="bug">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                      <span data-i18n="category_bug">不具合報告</span>
+                    </button>
+                    <button className="bug-nav-btn" data-category="request">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
+                      <span data-i18n="category_request">要望・要望</span>
+                    </button>
+                    <button className="bug-nav-btn" data-category="other">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+                      <span data-i18n="category_other">その他</span>
+                    </button>
+                    <input type="hidden" id="bugCategory" value="bug" />
+                  </aside>
+                  <div className="bug-content">
+                    <div className="form-group">
+                      <label htmlFor="bugTitle" data-i18n="bug_form_title">件名</label>
+                      <input type="text" id="bugTitle" placeholder="不具合の要約" data-i18n-placeholder="bug_form_placeholder_title" className="form-input" />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="bugDesc" data-i18n="bug_form_desc">詳細</label>
+                      <textarea id="bugDesc" placeholder="発生手順や期待される動作など..." data-i18n-placeholder="bug_form_placeholder_desc" className="form-input" rows={6} style={{ resize: 'none' }}></textarea>
+                    </div>
+                    <div className="form-error" id="bugError" hidden></div>
+                    <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                      <p className="setting-hint" style={{ fontSize: '11px', opacity: 0.6, margin: 0 }} data-i18n="bug_hint">※開発者に報告内容が送信されます</p>
+                      <button className="btn-primary" id="btnSubmitBug" style={{ minWidth: '120px' }} data-i18n="bug_submit">送信する</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="settings-section" id="settings-version">
@@ -499,45 +559,18 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="modal-overlay" id="bugModal">
-        <div className="modal-card bug-card">
+
+      <div className="modal-overlay" id="logModal">
+        <div className="modal-card" style={{ maxWidth: '600px', width: '90%', height: '80%' }}>
           <div className="modal-hdr">
-            <h3 data-i18n="bug_report_title">フィードバック</h3>
-            <button className="modal-close" id="btnCloseBug">&times;</button>
+            <h3 data-i18n="log_title">アプリログ</h3>
+            <button className="modal-close" id="btnCloseLogs">&times;</button>
           </div>
-          <div className="bug-layout">
-            <aside className="bug-sidebar">
-              <button className="bug-nav-btn active" data-category="bug">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M18 6L6 18M6 6l12 12"></path></svg>
-                <span data-i18n="category_bug">不具合報告</span>
-              </button>
-              <button className="bug-nav-btn" data-category="request">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
-                <span data-i18n="category_request">要望・要望</span>
-              </button>
-              <button className="bug-nav-btn" data-category="other">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
-                <span data-i18n="category_other">その他</span>
-              </button>
-              <input type="hidden" id="bugCategory" value="bug" />
-            </aside>
-            <div className="bug-content">
-              <div className="form-group">
-                <label htmlFor="bugTitle" data-i18n="bug_form_title">件名</label>
-                <input type="text" id="bugTitle" placeholder="不具合の要約" data-i18n-placeholder="bug_form_placeholder_title" className="form-input" />
-              </div>
-              <div className="form-group">
-                <label htmlFor="bugDesc" data-i18n="bug_form_desc">詳細</label>
-                <textarea id="bugDesc" placeholder="発生手順や期待される動作など..." data-i18n-placeholder="bug_form_placeholder_desc" className="form-input" rows={6} style={{ resize: 'none' }}></textarea>
-              </div>
-              <div className="form-error" id="bugError" hidden></div>
-            </div>
+          <div className="modal-body" style={{ height: 'calc(100% - 110px)', padding: '0' }}>
+            <textarea id="logArea" readOnly style={{ width: '100%', height: '100%', background: '#000', color: '#0f0', border: 'none', padding: '15px', fontFamily: 'monospace', fontSize: '11px', outline: 'none', resize: 'none' }}></textarea>
           </div>
-          <div className="modal-footer">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
-              <p className="setting-hint" style={{ fontSize: '11px', opacity: 0.6, margin: 0 }} data-i18n="bug_hint">※開発者に報告内容が送信されます</p>
-              <button className="btn-primary" id="btnSubmitBug" style={{ minWidth: '120px' }} data-i18n="bug_submit">送信する</button>
-            </div>
+          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn-primary" id="btnClearLogs" style={{ minWidth: '100px' }} data-i18n="clear_all">全て削除</button>
           </div>
         </div>
       </div>

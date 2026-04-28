@@ -14,6 +14,7 @@
   --ui-bg-alpha: 0.4;
 
   --bg: transparent;
+  --bg-solid: #121212;
   --bg2: rgba(30, 30, 30, var(--ui-bg-alpha));
   --bg3: rgba(45, 45, 45, var(--ui-bg-alpha));
   --text: #e0e0e0;
@@ -37,6 +38,7 @@
 body.dark-theme {
   color-scheme: dark;
   --bg: transparent;
+  --bg-solid: #121212;
   --bg2: rgba(30, 30, 30, var(--ui-bg-alpha));
   --bg3: rgba(45, 45, 45, var(--ui-bg-alpha));
   --text: #e0e0e0;
@@ -55,6 +57,7 @@ body.dark-theme {
 body.light-theme {
   color-scheme: light;
   --bg: rgba(255, 255, 255, var(--ui-bg-alpha));
+  --bg-solid: #ffffff;
   --bg2: rgba(255, 255, 255, calc(var(--ui-bg-alpha) * 0.8));
   --bg3: rgba(220, 220, 220, calc(var(--ui-bg-alpha) * 0.55));
   --text: #1a1a1a;
@@ -203,14 +206,14 @@ body {
 
 .modal-card.settings-card,
 .modal-card.bug-card {
-  max-width: 520px;
+  max-width: 620px;
   display: flex;
   flex-direction: column;
 }
 
 .bug-layout {
   display: flex;
-  height: 280px;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -259,7 +262,7 @@ body {
 
 .settings-layout {
   display: flex;
-  height: 320px;
+  height: 400px;
   overflow: hidden;
 }
 
@@ -306,12 +309,18 @@ body {
 
 .settings-content {
   flex: 1;
-  padding: 20px;
+  padding: 0;
   overflow-y: auto;
 }
 
 .settings-section {
   display: none;
+  height: 100%;
+  padding: 20px;
+}
+
+.settings-section#settings-feedback {
+  padding: 0;
 }
 
 .settings-section.active {
@@ -405,6 +414,10 @@ body {
   background: var(--primary);
   color: var(--text);
   border-color: var(--text-3);
+}
+
+.btn-secondary svg {
+  flex-shrink: 0;
 }
 
 .setting-hint {
@@ -1563,7 +1576,7 @@ body.light-theme .ctrl-icon svg {
 }
 
 .ctrl-icon.active {
-  color: var(--bg);
+  color: var(--bg-solid);
   border-color: var(--accent-color, var(--text));
   background: var(--accent-color, var(--text));
 }
@@ -1605,7 +1618,7 @@ body.light-theme .ctrl-icon svg {
   height: 14px;
   border-radius: 50%;
   background: var(--text);
-  color: var(--bg);
+  color: var(--bg-solid);
   font-size: 0.6rem;
   font-weight: 700;
   display: flex;
@@ -1824,8 +1837,8 @@ body.light-theme .vol-lbl {
 
 .update-btn-now {
   padding: 6px 14px;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent-color);
+  color: white;
   border: none;
   border-radius: 6px;
   font-size: 0.78rem;
@@ -2343,4 +2356,33 @@ body.light-theme .play-btn svg {
   height: 1px;
   background: var(--border);
   margin: 6px 4px;
+}
+
+/* Log Modal Styles */
+#logArea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) transparent;
+}
+
+#logArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+#logArea::-webkit-scrollbar-track {
+  background: #111;
+}
+
+#logArea::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+#logArea::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+#btnResetSettings:hover {
+  background: #d32f2f !important;
+  color: #fff !important;
+  border-color: #d32f2f !important;
 }
