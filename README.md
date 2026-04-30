@@ -77,8 +77,6 @@ Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイ
 
 ## セットアップ
 
-### 前提環境
-
 1. [Rust](https://www.rust-lang.org/ja/tools/install) をインストール
 2. [Node.js](https://nodejs.org/) をインストール
 3. このリポジトリをクローン
