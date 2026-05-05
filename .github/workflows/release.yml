@@ -113,6 +113,10 @@ jobs:
         if: steps.release_gate.outputs.should_release == 'true'
         run: npm run bump ${{ steps.release_info.outputs.version }}
 
+      - name: Format version files
+        if: steps.release_gate.outputs.should_release == 'true'
+        run: npx prettier --write package.json package-lock.json src-tauri/tauri.conf.json
+
       - name: Update Cargo.lock
         if: steps.release_gate.outputs.should_release == 'true'
         run: cargo check --manifest-path src-tauri/Cargo.toml
