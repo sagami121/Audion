@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      WINGET_TOKEN_CONFIGURED: ${{ secrets.WINGET_TOKEN != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Read changelog release
+        id: release_info
+        run: node scripts/release-info.mjs --out release-notes.md
+
+      - name: Validate changelog version
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
+          $releaseVersion = "${{ steps.release_info.outputs.version }}"
+          $packageParts = $packageVersion.Split(".") | ForEach-Object { [int]$_ }
+          $releaseParts = $releaseVersion.Split(".") | ForEach-Object { [int]$_ }
+          for ($i = 0; $i -lt [Math]::Max($packageParts.Count, $releaseParts.Count); $i++) {
+            $packagePart = if ($i -lt $packageParts.Count) { $packageParts[$i] } else { 0 }
+            $releasePart = if ($i -lt $releaseParts.Count) { $releaseParts[$i] } else { 0 }
+            if ($releasePart -lt $packagePart) {
+              throw "Latest Changelog.txt version ($releaseVersion) is older than package.json version ($packageVersion). Add a new Changelog.txt entry before releasing."
+            }
+            if ($releasePart -gt $packagePart) {
+              break
+            }
+          }
+
+      - name: Stop if tag already exists
+        shell: pwsh
+        run: |
+          git fetch --tags
+          if (git rev-parse "${{ steps.release_info.outputs.tag }}" 2>$null) {
+            throw "Tag ${{ steps.release_info.outputs.tag }} already exists."
+          }
+
+      - name: Bump project version
+        run: npm run bump ${{ steps.release_info.outputs.version }}
+
+      - name: Update Cargo.lock
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Generate installer checksums
+        shell: pwsh
+        run: |
+          $artifacts = Get-ChildItem -Path src-tauri/target/release/bundle -Recurse -File |
+            Where-Object { $_.Extension -in ".msi", ".exe" }
+          if (-not $artifacts) {
+            throw "No installer artifacts found."
+          }
+          foreach ($artifact in $artifacts) {
+            $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($artifact.Name)" | Set-Content "$($artifact.FullName).sha256" -Encoding ascii
+          }
+
+      - name: Commit version bump and tag
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "chore: release ${{ steps.release_info.outputs.tag }}"
+          }
+          git tag ${{ steps.release_info.outputs.tag }}
+          git push origin HEAD:main
+          git push origin ${{ steps.release_info.outputs.tag }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          name: Audion ${{ steps.release_info.outputs.version }}
+          body_path: release-notes.md
+          files: |
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.sha256
+          fail_on_unmatched_files: true
+
+      - name: Dispatch WinGet workflow
+        if: env.WINGET_TOKEN_CONFIGURED == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run winget.yml --ref main -f version=${{ steps.release_info.outputs.version }}
