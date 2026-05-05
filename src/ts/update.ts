@@ -5,6 +5,7 @@ import { translations } from './translations.js';
 interface ReleaseAsset {
   name: string;
   browser_download_url: string;
+  sha256?: string | null;
 }
 
 interface ReleaseInfo {
@@ -77,7 +78,9 @@ async function fetchLatestRelease(): Promise<ReleaseInfo> {
 }
 
 function normalizeVersion(version: string): string {
-  return String(version || '').trim().replace(/^v/i, '');
+  return String(version || '')
+    .trim()
+    .replace(/^v/i, '');
 }
 
 function isNewerVersion(current: string, latest: string): boolean {
@@ -141,13 +144,17 @@ function showUpdateToast(releaseInfo: ReleaseInfo): void {
 }
 
 function findInstallerAsset(releaseInfo: ReleaseInfo): ReleaseAsset | null {
-  const version = normalizeVersion(releaseInfo.tag_name);
-  const expectedNames = [
-    `Audion_${version}_x64_ja-JP.msi`,
-    `Audion_v${version}_x64_ja-JP.msi`
-  ];
+  const assets = releaseInfo.assets || [];
 
-  return releaseInfo.assets?.find((asset) => expectedNames.includes(asset.name)) || null;
+  // 1. Prioritize MSI
+  const msi = assets.find((a) => a.name.toLowerCase().endsWith('.msi'));
+  if (msi) return msi;
+
+  // 2. Fallback to EXE
+  const exe = assets.find((a) => a.name.toLowerCase().endsWith('.exe'));
+  if (exe) return exe;
+
+  return null;
 }
 
 async function downloadAndInstall(releaseInfo: ReleaseInfo): Promise<void> {
@@ -155,7 +162,10 @@ async function downloadAndInstall(releaseInfo: ReleaseInfo): Promise<void> {
   const installerAsset = findInstallerAsset(releaseInfo);
 
   if (!installerAsset?.browser_download_url) {
-    throw new Error(`MSI asset not found: Audion_${normalizeVersion(releaseInfo.tag_name)}_x64_ja-JP.msi`);
+    throw new Error('Installer asset not found');
+  }
+  if (!installerAsset.sha256) {
+    throw new Error('Installer checksum is missing');
   }
 
   showToast(dict.toast_update_downloading || 'Downloading update...', 20000);
@@ -166,7 +176,8 @@ async function downloadAndInstall(releaseInfo: ReleaseInfo): Promise<void> {
 
   const tempPath = await invoke('download_installer', {
     assetUrl: installerAsset.browser_download_url,
-    fileName: installerAsset.name
+    fileName: installerAsset.name,
+    expectedSha256: installerAsset.sha256
   });
   showToast('インストーラーを起動します...', 5000);
 
@@ -196,8 +207,14 @@ function formatUpdaterError(error: any): string {
   if (normalized.includes('latest release tag not found')) {
     return '最新リリースのタグを取得できません';
   }
-  if (normalized.includes('msi asset not found')) {
-    return '指定の MSI ファイルが Release にありません';
+  if (normalized.includes('installer asset not found')) {
+    return 'インストーラーが見つかりません (MSI/EXE)';
+  }
+  if (normalized.includes('checksum is missing')) {
+    return 'インストーラーのSHA-256チェックサムが見つかりません';
+  }
+  if (normalized.includes('checksum mismatch')) {
+    return 'インストーラーのSHA-256検証に失敗しました';
   }
   if (normalized.includes('download failed')) {
     return 'インストーラーのダウンロードに失敗しました';
