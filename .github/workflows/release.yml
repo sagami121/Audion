@@ -137,16 +137,38 @@ jobs:
         if: steps.release_gate.outputs.should_release == 'true'
         run: npm run tauri build
 
-      - name: Generate installer checksums
+      - name: Prepare release assets
         if: steps.release_gate.outputs.should_release == 'true'
         shell: pwsh
         run: |
-          $artifacts = Get-ChildItem -Path src-tauri/target/release/bundle -Recurse -File |
-            Where-Object { $_.Extension -in ".msi", ".exe" }
-          if (-not $artifacts) {
-            throw "No installer artifacts found."
+          $version = "${{ steps.release_info.outputs.version }}"
+          $assetDir = "release-assets"
+          New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
+
+          $bundleDir = "src-tauri/target/release/bundle"
+          $exe = Get-ChildItem -Path $bundleDir -Recurse -File -Filter "*.exe" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          $msi = Get-ChildItem -Path $bundleDir -Recurse -File -Filter "*.msi" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            throw "No EXE installer artifact found."
           }
-          foreach ($artifact in $artifacts) {
+          if (-not $msi) {
+            throw "No MSI installer artifact found."
+          }
+
+          $releaseArtifacts = @(
+            @{ Source = $exe.FullName; Name = "Audion_${version}_x64-setup.exe" },
+            @{ Source = $msi.FullName; Name = "Audion_${version}_x64_ja-JP.msi" }
+          )
+
+          foreach ($item in $releaseArtifacts) {
+            $target = Join-Path $assetDir $item.Name
+            Copy-Item $item.Source $target -Force
+            $artifact = Get-Item $target
             $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($artifact.Name)" | Set-Content "$($artifact.FullName).sha256" -Encoding ascii
           }
@@ -174,12 +196,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
-          name: Audion ${{ steps.release_info.outputs.version }}
+          name: ${{ steps.release_info.outputs.version }}
           body_path: release-notes.md
           files: |
-            src-tauri/target/release/bundle/**/*.msi
-            src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.sha256
+            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe
+            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe.sha256
+            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64_ja-JP.msi
+            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64_ja-JP.msi.sha256
           fail_on_unmatched_files: true
 
       - name: Dispatch WinGet workflow
