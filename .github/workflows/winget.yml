@@ -25,16 +25,24 @@ jobs:
     name: Submit WinGet Update
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      WINGET_TOKEN_CONFIGURED: ${{ secrets.WINGET_TOKEN != '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Skip without WinGet token
+        if: env.WINGET_TOKEN_CONFIGURED != 'true'
+        run: echo "WINGET_TOKEN is not configured. Skipping WinGet submission."
+
       - name: Read changelog release
+        if: env.WINGET_TOKEN_CONFIGURED == 'true'
         id: changelog
         run: node scripts/release-info.mjs
 
       - name: Resolve release asset
+        if: env.WINGET_TOKEN_CONFIGURED == 'true'
         id: release
         shell: pwsh
         env:
@@ -65,10 +73,12 @@ jobs:
           "installer_url=$($asset.url)" >> $env:GITHUB_OUTPUT
 
       - name: Download wingetcreate
+        if: env.WINGET_TOKEN_CONFIGURED == 'true'
         shell: pwsh
         run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
 
       - name: Submit WinGet PR
+        if: env.WINGET_TOKEN_CONFIGURED == 'true'
         shell: pwsh
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
