@@ -96,14 +96,18 @@ jobs:
             }
           }
 
-      - name: Stop if tag already exists
+      - name: Check existing tag
         if: steps.release_gate.outputs.should_release == 'true'
+        id: tag_state
         shell: pwsh
         run: |
           git fetch --tags
-          if (git rev-parse "${{ steps.release_info.outputs.tag }}" 2>$null) {
-            throw "Tag ${{ steps.release_info.outputs.tag }} already exists."
+          $tagExists = "false"
+          if (git rev-parse --verify "refs/tags/${{ steps.release_info.outputs.tag }}" 2>$null) {
+            $tagExists = "true"
+            Write-Host "Tag ${{ steps.release_info.outputs.tag }} already exists. Reusing it for this release run."
           }
+          "tag_exists=$tagExists" >> $env:GITHUB_OUTPUT
 
       - name: Bump project version
         if: steps.release_gate.outputs.should_release == 'true'
@@ -153,9 +157,13 @@ jobs:
           if (-not (git diff --cached --quiet)) {
             git commit -m "chore: release ${{ steps.release_info.outputs.tag }}"
           }
-          git tag ${{ steps.release_info.outputs.tag }}
+          if ("${{ steps.tag_state.outputs.tag_exists }}" -ne "true") {
+            git tag ${{ steps.release_info.outputs.tag }}
+          }
           git push origin HEAD:main
-          git push origin ${{ steps.release_info.outputs.tag }}
+          if ("${{ steps.tag_state.outputs.tag_exists }}" -ne "true") {
+            git push origin ${{ steps.release_info.outputs.tag }}
+          }
 
       - name: Publish GitHub Release
         if: steps.release_gate.outputs.should_release == 'true'
