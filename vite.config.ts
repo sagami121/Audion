@@ -13,11 +13,11 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: true,
+    host: true
   },
   // 3. to make use of `TAURI_DEBUG` and other env variables
   // https://tauri.app/v1/api/config#buildconfig.beforedevcommand
-  envPrefix: ["VITE_", "TAURI_"],
+  envPrefix: ['VITE_', 'TAURI_'],
   build: {
     // Modern target for Tauri 2
     target: 'esnext',
@@ -29,8 +29,8 @@ export default defineConfig(() => ({
     emptyOutDir: true,
     rolldownOptions: {
       checks: {
-        pluginTimings: false,
-      },
-    },
-  },
+        pluginTimings: false
+      }
+    }
+  }
 }));
