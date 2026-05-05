@@ -8,7 +8,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { loadLyrics } from './lyrics.js';
 
 export function savePlaylist(): void {
-  const minimalTracks = state.tracks.map(t => ({
+  const minimalTracks = state.tracks.map((t) => ({
     path: t.path,
     addedAt: t.addedAt,
     playCount: t.playCount || 0,
@@ -24,7 +24,10 @@ export function buildShuffleOrder(): void {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   const pos = arr.indexOf(state.current);
-  if (pos > 0) { arr.splice(pos, 1); arr.unshift(state.current); }
+  if (pos > 0) {
+    arr.splice(pos, 1);
+    arr.unshift(state.current);
+  }
   state.shuffleOrder = arr;
 }
 
@@ -36,24 +39,27 @@ export function playAudio(
   playlistEl: HTMLElement | null
 ): void {
   audio.volume = state.muted ? 0 : state.volume;
-  audio.play().then(() => {
-    state.playing = true;
-    updatePlayUI(true);
-    if (albumArt) {
-      albumArt.classList.add('spinning');
-      albumArt.classList.remove('paused');
-    }
-    if (vinylCenter) vinylCenter.classList.add('show');
-    if (artGlow) artGlow.classList.add('active');
-    updateActive(playlistEl);
-    startVisualizer();
-    updateDiscordRPC();
-    window.dispatchEvent(new CustomEvent('audion-play-state-changed'));
-  }).catch(e => {
-    console.error(e);
-    const dict = translations[state.lang] || translations.ja;
-    showToast(dict.toast_error_play);
-  });
+  audio
+    .play()
+    .then(() => {
+      state.playing = true;
+      updatePlayUI(true);
+      if (albumArt) {
+        albumArt.classList.add('spinning');
+        albumArt.classList.remove('paused');
+      }
+      if (vinylCenter) vinylCenter.classList.add('show');
+      if (artGlow) artGlow.classList.add('active');
+      updateActive(playlistEl);
+      startVisualizer();
+      updateDiscordRPC();
+      window.dispatchEvent(new CustomEvent('audion-play-state-changed'));
+    })
+    .catch((e) => {
+      console.error(e);
+      const dict = translations[state.lang] || translations.ja;
+      showToast(dict.toast_error_play);
+    });
 }
 
 export function pauseAudio(
@@ -82,16 +88,24 @@ export function togglePlay(
   loadTrack: (index: number, autoplay: boolean) => void
 ): void {
   const dict = translations[state.lang] || translations.ja;
-  if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
-  if (state.current === -1) { loadTrack(0, true); return; }
+  if (!state.tracks.length) {
+    showToast(dict.toast_no_tracks);
+    return;
+  }
+  if (state.current === -1) {
+    loadTrack(0, true);
+    return;
+  }
   if (audio) {
-    state.playing ? pauseAudio(audio, albumArt, playlistEl) : playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl);
+    state.playing
+      ? pauseAudio(audio, albumArt, playlistEl)
+      : playAudio(audio, albumArt, vinylCenter, artGlow, playlistEl);
   }
 }
 
 export function playNext(loadTrack: (index: number, autoplay: boolean) => void): void {
   if (!state.tracks.length) return;
-  
+
   if (state.repeat === 'none' && !state.shuffle) {
     if (state.current === state.tracks.length - 1) return;
   }
@@ -107,9 +121,15 @@ export function playNext(loadTrack: (index: number, autoplay: boolean) => void):
   loadTrack(next, true);
 }
 
-export function playPrev(audio: HTMLAudioElement | null, loadTrack: (index: number, autoplay: boolean) => void): void {
+export function playPrev(
+  audio: HTMLAudioElement | null,
+  loadTrack: (index: number, autoplay: boolean) => void
+): void {
   if (!state.tracks.length) return;
-  if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
+  if (audio && audio.currentTime > 3) {
+    audio.currentTime = 0;
+    return;
+  }
 
   if (state.repeat === 'none' && !state.shuffle) {
     if (state.current === 0) return;
@@ -127,7 +147,7 @@ export function playPrev(audio: HTMLAudioElement | null, loadTrack: (index: numb
 }
 
 export function loadTrack(
-  index: number, 
+  index: number,
   autoplay: boolean,
   audio: HTMLAudioElement | null,
   albumArt: HTMLElement | null,
@@ -165,7 +185,11 @@ export function toggleShuffle(shuffleBtn: HTMLElement | null, saveSettings: () =
   saveSettings();
 }
 
-export function toggleRepeat(repeatBtn: HTMLElement | null, repeatBadge: HTMLElement | null, saveSettings: () => void): void {
+export function toggleRepeat(
+  repeatBtn: HTMLElement | null,
+  repeatBadge: HTMLElement | null,
+  saveSettings: () => void
+): void {
   if (state.repeat === 'none') state.repeat = 'all';
   else if (state.repeat === 'all') state.repeat = 'one';
   else state.repeat = 'none';

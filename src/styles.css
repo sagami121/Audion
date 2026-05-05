@@ -82,7 +82,9 @@ body {
   color: var(--text);
   user-select: none;
   -webkit-user-select: none;
-  transition: background-color var(--transition), color var(--transition);
+  transition:
+    background-color var(--transition),
+    color var(--transition);
 }
 
 .titlebar {
@@ -98,7 +100,9 @@ body {
   border-bottom: 1px solid var(--border);
   z-index: 9999;
   padding: 0 0 0 12px;
-  transition: background-color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
   overflow: hidden;
 }
 
@@ -139,7 +143,10 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color var(--transition), color var(--transition), transform 0.15s;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    transform 0.15s;
   flex-shrink: 0;
 }
 
@@ -201,7 +208,11 @@ body {
   max-width: 320px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   transform: translateY(10px);
-  transition: transform 0.25s, background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+  transition:
+    transform 0.25s,
+    background-color var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .modal-card.settings-card,
@@ -407,7 +418,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition), transform 0.2s;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition),
+    transform 0.2s;
 }
 
 .btn-secondary:hover {
@@ -451,7 +466,10 @@ body {
   outline: none;
   font-family: inherit;
   resize: none;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition);
 }
 
 .form-input:focus {
@@ -470,7 +488,7 @@ body {
   text-align: left;
 }
 
-input[type="checkbox"] {
+input[type='checkbox'] {
   accent-color: #38bdf8;
   width: 16px;
   height: 16px;
@@ -495,7 +513,9 @@ input[type="checkbox"] {
   background: var(--bg2);
   border-right: 1px solid var(--border);
   flex-shrink: 0;
-  transition: background-color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
   min-width: 200px;
   max-width: 500px;
 }
@@ -558,7 +578,10 @@ input[type="checkbox"] {
   color: var(--text);
   font-size: 0.8rem;
   outline: none;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition);
 }
 
 #plSearch:focus {
@@ -584,7 +607,11 @@ input[type="checkbox"] {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition), transform 0.2s;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition),
+    transform 0.2s;
   overflow: visible;
 }
 
@@ -636,7 +663,11 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition), transform 0.18s;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition),
+    transform 0.18s;
 }
 
 .icon-btn-sm:hover {
@@ -1050,7 +1081,9 @@ body.mini-view .lyrics-container {
   background: var(--accent-color, #a78bfa);
   border-radius: 3px;
   z-index: 1;
-  transition: height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.4s;
+  transition:
+    height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.4s;
   box-shadow: 0 0 15px var(--glow-color, rgba(167, 139, 250, 0.4));
 }
 
@@ -1092,7 +1125,9 @@ body.mini-view .lyrics-container {
   border-bottom: 1px solid var(--border);
   margin: 0 12px 10px;
   border-radius: 4px;
-  transition: color var(--transition), border-color var(--transition);
+  transition:
+    color var(--transition),
+    border-color var(--transition);
 }
 
 .drop-hint.hidden {
@@ -1143,7 +1178,6 @@ body.mini-view .lyrics-container {
   background: var(--primary);
 }
 
-
 .pl-info {
   flex: 1;
   min-width: 0;
@@ -1170,13 +1204,13 @@ body.mini-view .lyrics-container {
   transition: color var(--transition);
 }
 
-
 .pl-item.active {
   background: var(--primary);
   border-left: 2px solid var(--text);
-  transition: background-color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
-
 
 .pl-num {
   font-size: 0.7rem;
@@ -1223,7 +1257,6 @@ body.mini-view .lyrics-container {
 }
 
 @keyframes barAnim {
-
   0%,
   100% {
     height: 4px;
@@ -1263,7 +1296,10 @@ body.mini-view .lyrics-container {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background 0.15s;
 }
 
 .pl-item:hover .pl-fav,
@@ -1293,7 +1329,10 @@ body.mini-view .lyrics-container {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background 0.15s;
 }
 
 .pl-item:hover .pl-del {
@@ -1355,7 +1394,9 @@ body.mini-view .lyrics-container {
   border: 1px solid var(--border);
   display: block;
   opacity: 0;
-  transition: border-color var(--transition), opacity 0.4s;
+  transition:
+    border-color var(--transition),
+    opacity 0.4s;
 }
 
 .art-glow.active .art-ring {
@@ -1373,7 +1414,10 @@ body.mini-view .lyrics-container {
   overflow: hidden;
   border: 1px solid var(--border);
   z-index: 2;
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), border-color var(--transition), background-color var(--transition);
+  transition:
+    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color var(--transition),
+    background-color var(--transition);
 }
 
 .album-art.spinning {
@@ -1414,7 +1458,10 @@ body.mini-view .lyrics-container {
   opacity: 0;
   transform: scale(0.5);
   pointer-events: none;
-  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color var(--transition);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    border-color var(--transition);
   display: block;
 }
 
@@ -1516,13 +1563,17 @@ body.mini-view .lyrics-container {
 .seeker-buf {
   background: var(--border);
   width: 0;
-  transition: width 0.3s ease, background-color var(--transition);
+  transition:
+    width 0.3s ease,
+    background-color var(--transition);
 }
 
 .seeker-fill {
   background: var(--accent-color, var(--text));
   width: 0;
-  transition: width 0.1s linear, background-color var(--transition);
+  transition:
+    width 0.1s linear,
+    background-color var(--transition);
 }
 
 .seeker-thumb {
@@ -1536,7 +1587,9 @@ body.mini-view .lyrics-container {
   background: #fff;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s, border-color var(--transition);
+  transition:
+    opacity 0.15s,
+    border-color var(--transition);
   border: 1px solid var(--border);
 }
 
@@ -1562,7 +1615,11 @@ body.mini-view .lyrics-container {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition), transform 0.18s;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition),
+    transform 0.18s;
   position: relative;
 }
 
@@ -1597,7 +1654,10 @@ body.light-theme .ctrl-icon svg {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color var(--transition), border-color var(--transition), transform 0.2s;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    transform 0.2s;
 }
 
 .play-btn:hover {
@@ -1626,7 +1686,9 @@ body.light-theme .ctrl-icon svg {
   justify-content: center;
   top: -2px;
   right: -2px;
-  transition: background-color var(--transition), color var(--transition);
+  transition:
+    background-color var(--transition),
+    color var(--transition);
 }
 
 .ctrl-icon img {
@@ -1699,7 +1761,9 @@ body.light-theme .vol-lbl {
   background: var(--text);
   border-radius: 2px;
   pointer-events: none;
-  transition: width 0.1s linear, background-color var(--transition);
+  transition:
+    width 0.1s linear,
+    background-color var(--transition);
 }
 
 .vol-thumb {
@@ -1712,7 +1776,9 @@ body.light-theme .vol-lbl {
   background: #fff;
   pointer-events: none;
   opacity: 1;
-  transition: opacity 0.15s, border-color var(--transition);
+  transition:
+    opacity 0.15s,
+    border-color var(--transition);
   border: 1px solid var(--border);
 }
 
@@ -1750,7 +1816,10 @@ body.light-theme .vol-lbl {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text);
-  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .toast {
@@ -1767,7 +1836,11 @@ body.light-theme .vol-lbl {
   z-index: 20000;
   pointer-events: none;
   opacity: 0;
-  transition: all 0.35s, background-color var(--transition), color var(--transition), border-color var(--transition);
+  transition:
+    all 0.35s,
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition);
   white-space: nowrap;
 }
 
@@ -1788,9 +1861,14 @@ body.light-theme .vol-lbl {
   z-index: 20000;
   display: flex;
   gap: 16px;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4), 0 8px 12px -6px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 10px 30px -5px rgba(0, 0, 0, 0.4),
+    0 8px 12px -6px rgba(0, 0, 0, 0.4);
   transform: translateX(400px);
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition), border-color var(--transition);
+  transition:
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color var(--transition),
+    border-color var(--transition);
 }
 
 .update-toast.show {
@@ -1844,7 +1922,9 @@ body.light-theme .vol-lbl {
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
+  transition:
+    opacity 0.2s,
+    transform 0.1s;
 }
 
 .update-btn-now:hover {
@@ -1904,7 +1984,10 @@ body.light-theme .vol-lbl {
   border: 1px solid var(--border);
   font-size: 0.75rem;
   color: var(--text-2);
-  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .speed-lbl {
@@ -1932,7 +2015,9 @@ body.light-theme .vol-lbl {
   background: var(--text);
   cursor: pointer;
   border: 1px solid var(--border);
-  transition: background-color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
 
 .select-input {
@@ -1960,7 +2045,11 @@ body.light-theme .vol-lbl {
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: border-color 0.2s, background-color var(--transition), color var(--transition), border-radius 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color var(--transition),
+    color var(--transition),
+    border-radius 0.2s;
 }
 
 .cs-trigger:hover {
@@ -2012,8 +2101,9 @@ body.light-theme .vol-lbl {
   max-height: 0;
   opacity: 0;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease;
+  transition:
+    max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
   pointer-events: none;
 }
 
@@ -2143,7 +2233,11 @@ body.light-theme .vol-lbl {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.8rem;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition), transform 0.15s;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition),
+    transform 0.15s;
 }
 
 .theme-btn.active {
@@ -2151,7 +2245,10 @@ body.light-theme .vol-lbl {
   color: #fff;
   border-color: #a78bfa;
   font-weight: 700;
-  transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    border-color var(--transition);
 }
 
 #btnEqReset {
@@ -2284,7 +2381,7 @@ body.light-theme .play-btn svg {
   color: var(--text-2);
 }
 
-.fx-row input[type="range"] {
+.fx-row input[type='range'] {
   width: 120px;
   height: 4px;
   accent-color: var(--accent-color, #a78bfa);

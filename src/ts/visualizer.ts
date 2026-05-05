@@ -40,9 +40,9 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
       analyser = audioCtx.createAnalyser();
 
       source = audioCtx.createMediaElementSource(audioElement);
-      
+
       // Create EQ filters
-      filters = FREQUENCIES.map(freq => {
+      filters = FREQUENCIES.map((freq) => {
         const filter = audioCtx!.createBiquadFilter();
         filter.type = 'peaking';
         filter.frequency.value = freq;
@@ -59,7 +59,7 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
       reverb = audioCtx.createConvolver();
       reverb.buffer = generateImpulse(2.0, 2.0);
       reverbGain = audioCtx.createGain();
-      
+
       // Delay
       delay = audioCtx.createDelay(2.0);
       delayGain = audioCtx.createGain();
@@ -69,7 +69,7 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
 
       // Connect: Source -> FilterChain -> Compressor -> MakeupGain -> Reverb/Delay -> Analyser -> Destination
       let lastNode: AudioNode = source;
-      filters.forEach(filter => {
+      filters.forEach((filter) => {
         lastNode.connect(filter);
         lastNode = filter;
       });
@@ -78,7 +78,7 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
 
       // Parallel/Serial Effects Routing
       makeupGain.connect(analyser); // Dry signal to analyser
-      
+
       makeupGain.connect(reverb);
       reverb.connect(reverbGain);
       reverbGain.connect(analyser);
@@ -94,7 +94,7 @@ export function initVisualizer(audioElement: HTMLAudioElement): void {
       dataArray = new Uint8Array(bufferLength);
     }
   } catch (e) {
-    console.error("Visualizer initialization failed:", e);
+    console.error('Visualizer initialization failed:', e);
   }
 }
 
@@ -141,7 +141,7 @@ export function updateEffectsSettings(
     reverb.buffer = generateImpulse(dur, decay);
     currentReverbType = reverbSettings.type;
   }
-  
+
   if (reverbSettings.enabled) {
     reverbGain.gain.setTargetAtTime(reverbSettings.level, time, 0.05);
   } else {
@@ -169,8 +169,8 @@ function generateImpulse(duration: number, decay: number): AudioBuffer {
   for (let channel = 0; channel < 2; channel++) {
     const channelData = impulse.getChannelData(channel);
     for (let i = 0; i < length; i++) {
-        // White noise multiplied by exponential decay
-        channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      // White noise multiplied by exponential decay
+      channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
     }
   }
   return impulse;

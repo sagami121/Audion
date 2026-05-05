@@ -16,7 +16,9 @@ const originalWarn = console.warn;
 
 function formatLog(args: any[], level: string) {
   const time = new Date().toLocaleTimeString();
-  const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  const msg = args
+    .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
+    .join(' ');
   return `[${time}] [${level}] ${msg}`;
 }
 
@@ -35,12 +37,25 @@ console.warn = (...args) => {
   if (logs.length > MAX_LOGS) logs.shift();
   originalWarn.apply(console, args);
 };
-import { initVisualizer, updateEqGains, updateCompSettings, updateEffectsSettings } from './ts/visualizer';
+import {
+  initVisualizer,
+  updateEqGains,
+  updateCompSettings,
+  updateEffectsSettings
+} from './ts/visualizer';
 import { initUpdater } from './ts/update';
 import { updateDiscordRPC } from './ts/discord';
 import { updateLyrics } from './ts/lyrics';
-import { addPaths as addPathsLogic, getPlaylistView, toggleFavorite, loadPlaylist as loadPlaylistLogic } from './ts/playlist';
-import { updateEqUI as updateEqUILogic, updateCompValuesUI as updateCompValuesUILogic } from './ts/audio-settings';
+import {
+  addPaths as addPathsLogic,
+  getPlaylistView,
+  toggleFavorite,
+  loadPlaylist as loadPlaylistLogic
+} from './ts/playlist';
+import {
+  updateEqUI as updateEqUILogic,
+  updateCompValuesUI as updateCompValuesUILogic
+} from './ts/audio-settings';
 import muteIcon from './assets/mute.png';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -51,7 +66,9 @@ import { readDir as readDirectoryRaw } from '@tauri-apps/plugin-fs';
 import { register as registerShortcut, unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { LogicalSize, PhysicalSize } from '@tauri-apps/api/dpi';
 
-const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI__ || !!(window as any).__TAURI_METADATA__);
+const isTauri =
+  typeof window !== 'undefined' &&
+  (!!(window as any).__TAURI__ || !!(window as any).__TAURI_METADATA__);
 
 // DOM variables (to be initialized after React mount)
 let audio: HTMLAudioElement | null = null;
@@ -224,7 +241,7 @@ function closeCustomSelect(wrapper: HTMLDivElement) {
 }
 
 function initCustomSelects() {
-  document.querySelectorAll('select.select-input').forEach(sel => {
+  document.querySelectorAll('select.select-input').forEach((sel) => {
     const select = sel as HTMLSelectElement;
     if (select.parentElement?.classList.contains('custom-select')) return;
 
@@ -265,7 +282,7 @@ function initCustomSelects() {
       e.stopPropagation();
       const isOpen = dropdown.classList.contains('open');
       // Close all other dropdowns first
-      document.querySelectorAll('.cs-dropdown.open').forEach(d => {
+      document.querySelectorAll('.cs-dropdown.open').forEach((d) => {
         const w = d.closest('.custom-select') as HTMLDivElement | null;
         if (w) closeCustomSelect(w);
       });
@@ -279,20 +296,24 @@ function initCustomSelects() {
     document.addEventListener('click', () => closeCustomSelect(wrapper));
 
     // Mouse wheel: cycle through options without opening dropdown
-    trigger.addEventListener('wheel', (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const len = select.options.length;
-      if (!len) return;
-      let idx = select.selectedIndex;
-      if (e.deltaY < 0) idx = Math.max(0, idx - 1);
-      else idx = Math.min(len - 1, idx + 1);
-      if (idx !== select.selectedIndex) {
-        select.selectedIndex = idx;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        buildCustomSelect(select);
-      }
-    }, { passive: false });
+    trigger.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const len = select.options.length;
+        if (!len) return;
+        let idx = select.selectedIndex;
+        if (e.deltaY < 0) idx = Math.max(0, idx - 1);
+        else idx = Math.min(len - 1, idx + 1);
+        if (idx !== select.selectedIndex) {
+          select.selectedIndex = idx;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          buildCustomSelect(select);
+        }
+      },
+      { passive: false }
+    );
 
     // Sync when select.value is set programmatically (intercept setter)
     const proto = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!;
@@ -306,7 +327,10 @@ function initCustomSelects() {
     });
 
     // Observe option changes (dynamic population like eqPresetsSelect)
-    new MutationObserver(() => buildCustomSelect(select)).observe(select, { childList: true, subtree: true });
+    new MutationObserver(() => buildCustomSelect(select)).observe(select, {
+      childList: true,
+      subtree: true
+    });
 
     buildCustomSelect(select);
   });
@@ -318,7 +342,7 @@ async function getAppVersionSafe(): Promise<string> {
       return await invoke('get_version');
     }
   } catch (e) {
-    console.warn("Failed to get app version:", e);
+    console.warn('Failed to get app version:', e);
   }
   return state.version;
 }
@@ -355,22 +379,22 @@ function updateLanguage(lang: string) {
   state.lang = lang as 'ja' | 'en' | 'ko' | 'zh';
   const dict = translations[lang] || translations.ja;
 
-  document.querySelectorAll('[data-i18n]').forEach(el => {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
     if (key && dict[key]) el.innerHTML = dict[key];
   });
 
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     const key = el.getAttribute('data-i18n-placeholder');
     if (key && dict[key]) (el as HTMLInputElement).placeholder = dict[key];
   });
 
-  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
     const key = el.getAttribute('data-i18n-title');
     if (key && dict[key]) (el as HTMLElement).title = dict[key];
   });
 
-  document.querySelectorAll('[data-i18n-label]').forEach(el => {
+  document.querySelectorAll('[data-i18n-label]').forEach((el) => {
     const key = el.getAttribute('data-i18n-label');
     if (key && dict[key]) el.setAttribute('aria-label', dict[key]);
   });
@@ -480,10 +504,13 @@ async function toggleMiniMode() {
 }
 
 function onPlaylistRowClick(e: any, index: number) {
-  if (e.target.closest('.pl-del')) { removeTrack(index); return; }
-  if (e.target.closest('.pl-fav')) { 
+  if (e.target.closest('.pl-del')) {
+    removeTrack(index);
+    return;
+  }
+  if (e.target.closest('.pl-fav')) {
     toggleFavorite(index, updatePlaylistUI);
-    return; 
+    return;
   }
   if (state.current === index) togglePlayWrapper();
   else loadTrackWrapper(index, true);
@@ -494,12 +521,22 @@ function togglePlayWrapper() {
 }
 
 function loadTrackWrapper(index: number, autoplay = false) {
-  player.loadTrack(index, autoplay, audio, albumArt, vinylCenter, artGlow, playlist, lyricsInner, syncMediaSession);
+  player.loadTrack(
+    index,
+    autoplay,
+    audio,
+    albumArt,
+    vinylCenter,
+    artGlow,
+    playlist,
+    lyricsInner,
+    syncMediaSession
+  );
 }
 
 function updatePlaylistUI() {
   if (playlist) {
-    ui.renderPlaylist(playlist, getPlaylistView(), onPlaylistRowClick, plSearch?.value || "");
+    ui.renderPlaylist(playlist, getPlaylistView(), onPlaylistRowClick, plSearch?.value || '');
   }
 }
 
@@ -537,7 +574,7 @@ function removeTrack(index: number) {
   }
 
   state.tracks.splice(index, 1);
-  
+
   if (removingCurrent) {
     state.current = -1;
   } else if (state.current > index) {
@@ -549,10 +586,10 @@ function removeTrack(index: number) {
   player.buildShuffleOrder();
   player.savePlaylist();
 
-  if (!state.tracks.length) { 
-    resetPlayer(); 
-    dropHint?.classList.remove('hidden'); 
-    return; 
+  if (!state.tracks.length) {
+    resetPlayer();
+    dropHint?.classList.remove('hidden');
+    return;
   }
 
   if (removingCurrent) {
@@ -569,7 +606,16 @@ function updateCount() {
 }
 
 async function addPathsWrapper(paths: any[], isInitial = false) {
-  await addPathsLogic(paths, isInitial, playlist, plSearch, dropHint, onPlaylistRowClick, updateCount, loadTrackWrapper);
+  await addPathsLogic(
+    paths,
+    isInitial,
+    playlist,
+    plSearch,
+    dropHint,
+    onPlaylistRowClick,
+    updateCount,
+    loadTrackWrapper
+  );
 }
 
 function loadTrack(index: number, autoplay = false) {
@@ -611,7 +657,10 @@ function togglePlay() {
 
 function playOnly() {
   const dict = translations[state.lang] || translations.ja;
-  if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
+  if (!state.tracks.length) {
+    showToast(dict.toast_no_tracks);
+    return;
+  }
   if (state.current === -1) {
     loadTrack(0, true);
     return;
@@ -662,7 +711,7 @@ function populatePresetSelect() {
   flatOpt.textContent = dict.preset_flat || 'フラット';
   el.appendChild(flatOpt);
 
-  Object.keys(state.eqPresets).forEach(presetName => {
+  Object.keys(state.eqPresets).forEach((presetName) => {
     const opt = document.createElement('option');
     opt.value = presetName;
     opt.textContent = dict['preset_' + presetName] || presetName;
@@ -724,7 +773,6 @@ function saveSettings() {
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
 
-
 function updateVolIcon() {
   if (!volIcon) return;
   const v = state.muted ? 0 : state.volume;
@@ -755,8 +803,8 @@ function scrub(e: MouseEvent) {
 
   cancelAnimationFrame(seekRAF);
   seekRAF = requestAnimationFrame(() => {
-    if (seekFill) seekFill.style.width = (ratio * 100) + '%';
-    if (seekThumb) seekThumb.style.left = (ratio * 100) + '%';
+    if (seekFill) seekFill.style.width = ratio * 100 + '%';
+    if (seekThumb) seekThumb.style.left = ratio * 100 + '%';
     if (audio && audio.duration) {
       audio.currentTime = ratio * audio.duration;
       if (curTime) curTime.textContent = fmt(audio.currentTime);
@@ -768,7 +816,8 @@ function setVol(e: MouseEvent) {
   if (!volBar) return;
   const r = volBar.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-  state.volume = ratio; state.muted = ratio === 0;
+  state.volume = ratio;
+  state.muted = ratio === 0;
   if (audio) audio.volume = ratio;
   updateVolBarUI();
   saveSettings();
@@ -800,25 +849,30 @@ function syncMediaSession() {
 
   const currentTrack = state.tracks[state.current];
   const artwork = currentTrack.cover
-    ? [{
-      src: currentTrack.cover,
-      sizes: '512x512',
-      type: getCoverMimeType(currentTrack.cover),
-    }]
+    ? [
+        {
+          src: currentTrack.cover,
+          sizes: '512x512',
+          type: getCoverMimeType(currentTrack.cover)
+        }
+      ]
     : undefined;
 
   mediaSession.metadata = new MediaMetadata({
     title: currentTrack.name || 'Unknown Track',
     artist: currentTrack.artist || 'Unknown Artist',
     album: currentTrack.album || 'Audion',
-    artwork,
+    artwork
   });
 }
 
 function setupMediaSessionControls() {
   if (!('mediaSession' in navigator)) return;
   const mediaSession = navigator.mediaSession;
-  const safeSetHandler = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+  const safeSetHandler = (
+    action: MediaSessionAction,
+    handler: MediaSessionActionHandler | null
+  ) => {
     try {
       mediaSession.setActionHandler(action, handler);
     } catch (e) {
@@ -849,7 +903,6 @@ function setupMediaSessionControls() {
   syncMediaSession();
 }
 
-
 let windowShown = false;
 const showApp = async (): Promise<void> => {
   if (windowShown) return;
@@ -858,12 +911,12 @@ const showApp = async (): Promise<void> => {
     await win.show();
     windowShown = true;
   } catch (e) {
-    console.error("Failed to show window:", e);
+    console.error('Failed to show window:', e);
   }
 };
 
 function setupLegacyLogic() {
-  console.log("Setting up legacy logic...");
+  console.log('Setting up legacy logic...');
   const appWindow = getCurrentWebviewWindow();
 
   tbMin?.addEventListener('click', () => appWindow.minimize());
@@ -896,7 +949,10 @@ function setupLegacyLogic() {
       isResizing = false;
       sidebarResizer?.classList.remove('active');
       document.body.style.cursor = '';
-      localStorage.setItem('af_sidebar_w', document.documentElement.style.getPropertyValue('--sidebar-w'));
+      localStorage.setItem(
+        'af_sidebar_w',
+        document.documentElement.style.getPropertyValue('--sidebar-w')
+      );
     }
   });
 
@@ -911,23 +967,25 @@ function setupLegacyLogic() {
     btnThemeLight?.classList.toggle('active', state.theme === 'light');
 
     // Reset to general tab
-    settingsNavBtns?.forEach(b => b.classList.toggle('active', b.dataset.tab === 'general'));
-    settingsSections?.forEach(s => s.classList.toggle('active', s.id === 'settings-general'));
+    settingsNavBtns?.forEach((b) => b.classList.toggle('active', b.dataset.tab === 'general'));
+    settingsSections?.forEach((s) => s.classList.toggle('active', s.id === 'settings-general'));
 
     settingsModal?.classList.add('active');
   });
 
-  settingsNavBtns?.forEach(btn => {
+  settingsNavBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-      settingsNavBtns?.forEach(b => b.classList.toggle('active', b === btn));
-      settingsSections?.forEach(section => {
+      settingsNavBtns?.forEach((b) => b.classList.toggle('active', b === btn));
+      settingsSections?.forEach((section) => {
         section.classList.toggle('active', section.id === `settings-${tabId}`);
       });
     });
   });
   btnCloseSettings?.addEventListener('click', () => settingsModal?.classList.remove('active'));
-  settingsModal?.addEventListener('click', (e: MouseEvent) => { if (e.target === settingsModal) settingsModal?.classList.remove('active'); });
+  settingsModal?.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === settingsModal) settingsModal?.classList.remove('active');
+  });
 
   btnSaveSettings?.addEventListener('click', () => {
     let needsLanguageUpdate = false;
@@ -979,12 +1037,12 @@ function setupLegacyLogic() {
     saveSettings();
     settingsModal?.classList.remove('active');
     const dict = translations[state.lang] || translations.ja;
-    showToast(dict.toast_settings_saved || "設定を保存しました");
+    showToast(dict.toast_settings_saved || '設定を保存しました');
   });
 
   btnResetSettings?.addEventListener('click', () => {
     const dict = translations[state.lang] || translations.ja;
-    if (confirm(dict.setting_reset_confirm || "Reset settings?")) {
+    if (confirm(dict.setting_reset_confirm || 'Reset settings?')) {
       localStorage.clear();
       window.location.reload();
     }
@@ -1008,10 +1066,10 @@ function setupLegacyLogic() {
     if (e.target === logModal) logModal?.classList.remove('active');
   });
 
-  bugNavBtns?.forEach(btn => {
+  bugNavBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const cat = btn.dataset.category || 'bug';
-      bugNavBtns?.forEach(b => b.classList.toggle('active', b === btn));
+      bugNavBtns?.forEach((b) => b.classList.toggle('active', b === btn));
       if (bugCategory) bugCategory.value = cat;
     });
   });
@@ -1033,7 +1091,7 @@ function setupLegacyLogic() {
     }
 
     btnSubmitBug.disabled = true;
-    btnSubmitBug.textContent = dict.sending || "Sending...";
+    btnSubmitBug.textContent = dict.sending || 'Sending...';
 
     const markdown = `**Category: ${category}**\n\n**Description**\n${desc}`;
 
@@ -1067,12 +1125,11 @@ function setupLegacyLogic() {
     } finally {
       if (btnSubmitBug) {
         btnSubmitBug.disabled = false;
-        btnSubmitBug.textContent = dict.submit || "Submit";
+        btnSubmitBug.textContent = dict.submit || 'Submit';
       }
       clearBugError();
     }
   });
-
 
   bugTitle?.addEventListener('input', () => {
     if (bugTitle && bugTitle.value.trim()) bugTitle.classList.remove('input-error');
@@ -1098,27 +1155,35 @@ function setupLegacyLogic() {
   });
 
   // Sync opacity slider value when settings modal opens
-  btnSettings?.addEventListener('click', () => {
-    if (opacitySlider) opacitySlider.value = Math.round(uiOpacityValue * 100).toString();
-    if (opacityLbl) opacityLbl.textContent = `${Math.round(uiOpacityValue * 100)}%`;
-  }, { capture: true });
+  btnSettings?.addEventListener(
+    'click',
+    () => {
+      if (opacitySlider) opacitySlider.value = Math.round(uiOpacityValue * 100).toString();
+      if (opacityLbl) opacityLbl.textContent = `${Math.round(uiOpacityValue * 100)}%`;
+    },
+    { capture: true }
+  );
 
-  document.querySelectorAll('select.select-input').forEach(el => {
+  document.querySelectorAll('select.select-input').forEach((el) => {
     const sel = el as HTMLSelectElement;
-    sel.addEventListener('wheel', (e: WheelEvent) => {
-      e.preventDefault();
-      const len = sel.options.length;
-      if (!len) return;
+    sel.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        e.preventDefault();
+        const len = sel.options.length;
+        if (!len) return;
 
-      let idx = sel.selectedIndex;
-      if (e.deltaY < 0) idx = Math.max(0, idx - 1);
-      else idx = Math.min(len - 1, idx + 1);
+        let idx = sel.selectedIndex;
+        if (e.deltaY < 0) idx = Math.max(0, idx - 1);
+        else idx = Math.min(len - 1, idx + 1);
 
-      if (idx !== sel.selectedIndex) {
-        sel.selectedIndex = idx;
-        sel.dispatchEvent(new Event('change'));
-      }
-    }, { passive: false });
+        if (idx !== sel.selectedIndex) {
+          sel.selectedIndex = idx;
+          sel.dispatchEvent(new Event('change'));
+        }
+      },
+      { passive: false }
+    );
   });
 
   btnMiniMode?.addEventListener('click', () => {
@@ -1129,7 +1194,7 @@ function setupLegacyLogic() {
   sidebar?.addEventListener('contextmenu', (e: MouseEvent) => {
     // Only show if NOT clicking on a playlist item (handled by ui.ts)
     if ((e.target as HTMLElement).closest('.pl-item')) return;
-    
+
     e.preventDefault();
     if (sidebarContextMenu) {
       sidebarContextMenu.style.display = 'block';
@@ -1145,8 +1210,14 @@ function setupLegacyLogic() {
     }
   });
 
-  cmPosLeft?.addEventListener('click', () => { setPlaylistPosition('left'); hideSidebarContextMenu(); });
-  cmPosRight?.addEventListener('click', () => { setPlaylistPosition('right'); hideSidebarContextMenu(); });
+  cmPosLeft?.addEventListener('click', () => {
+    setPlaylistPosition('left');
+    hideSidebarContextMenu();
+  });
+  cmPosRight?.addEventListener('click', () => {
+    setPlaylistPosition('right');
+    hideSidebarContextMenu();
+  });
 
   playBtn?.addEventListener('click', () => {
     togglePlay();
@@ -1177,22 +1248,25 @@ function setupLegacyLogic() {
     setSpeed(val);
   });
 
-  speedSlider?.addEventListener('wheel', (e: WheelEvent) => {
-    e.preventDefault();
-    let val = state.speed;
-    const step = 0.1;
-    if (e.deltaY < 0) val = Math.min(2.0, val + step);
-    else val = Math.max(0.5, val - step);
-    val = Math.round(val * 10) / 10;
-    setSpeed(val);
-  }, { passive: false });
+  speedSlider?.addEventListener(
+    'wheel',
+    (e: WheelEvent) => {
+      e.preventDefault();
+      let val = state.speed;
+      const step = 0.1;
+      if (e.deltaY < 0) val = Math.min(2.0, val + step);
+      else val = Math.max(0.5, val - step);
+      val = Math.round(val * 10) / 10;
+      setSpeed(val);
+    },
+    { passive: false }
+  );
 
-
-  eqTabBtns?.forEach(btn => {
+  eqTabBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-      eqTabBtns?.forEach(b => b.classList.toggle('active', b === btn));
-      tabContents?.forEach(content => {
+      eqTabBtns?.forEach((b) => b.classList.toggle('active', b === btn));
+      tabContents?.forEach((content) => {
         content.classList.toggle('active', content.id === `${tabId}TabContent`);
       });
       updateEqUI();
@@ -1210,12 +1284,16 @@ function setupLegacyLogic() {
 
   document.addEventListener('click', (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (eqOverlay?.classList.contains('active') && !eqOverlay.contains(target) && e.target !== btnShowEq && !btnShowEq?.contains(target)) {
+    if (
+      eqOverlay?.classList.contains('active') &&
+      !eqOverlay.contains(target) &&
+      e.target !== btnShowEq &&
+      !btnShowEq?.contains(target)
+    ) {
       eqOverlay?.classList.remove('active');
       btnShowEq?.classList.remove('active');
     }
   });
-
 
   checkEq?.addEventListener('change', (e: Event) => {
     const target = e.target as HTMLInputElement;
@@ -1263,10 +1341,10 @@ function setupLegacyLogic() {
     }
   });
 
-  eqSliders?.forEach(slider => {
+  eqSliders?.forEach((slider) => {
     slider.addEventListener('input', (e: Event) => {
       const target = e.target as HTMLInputElement;
-      const idx = parseInt(target.dataset.index || "0");
+      const idx = parseInt(target.dataset.index || '0');
       state.eqGains[idx] = parseFloat(target.value);
       if (eqPresetsSelect) eqPresetsSelect.value = 'manual';
 
@@ -1280,9 +1358,9 @@ function setupLegacyLogic() {
     });
     slider.addEventListener('dblclick', (e: MouseEvent) => {
       const target = e.target as HTMLInputElement;
-      const idx = parseInt(target.dataset.index || "0");
+      const idx = parseInt(target.dataset.index || '0');
       state.eqGains[idx] = 0;
-      target.value = "0";
+      target.value = '0';
       updateEqUI();
       saveSettings();
     });
@@ -1322,15 +1400,19 @@ function setupLegacyLogic() {
     updateCompSettings(state.compSettings, state.compEnabled);
   });
 
-  [compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach(el => {
+  [compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach((el) => {
     el?.addEventListener('change', () => saveSettings());
   });
 
   const compDefaults: Record<string, number> = {
-    compThreshold: -24, compKnee: 30, compRatio: 12,
-    compAttack: 0.003, compRelease: 0.25, compMakeup: 0
+    compThreshold: -24,
+    compKnee: 30,
+    compRatio: 12,
+    compAttack: 0.003,
+    compRelease: 0.25,
+    compMakeup: 0
   };
-  [compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach(el => {
+  [compThreshold, compKnee, compRatio, compAttack, compRelease, compMakeup].forEach((el) => {
     el?.addEventListener('dblclick', () => {
       const key = el.id as keyof typeof compDefaults;
       const def = compDefaults[key];
@@ -1353,7 +1435,12 @@ function setupLegacyLogic() {
     if (audio) {
       updateEffectsSettings(
         { enabled: state.reverbEnabled, level: state.reverbLevel, type: state.reverbType },
-        { enabled: state.delayEnabled, level: state.delayLevel, time: state.delayTime, feedback: state.delayFeedback }
+        {
+          enabled: state.delayEnabled,
+          level: state.delayLevel,
+          time: state.delayTime,
+          feedback: state.delayFeedback
+        }
       );
     }
   };
@@ -1372,7 +1459,7 @@ function setupLegacyLogic() {
     updateFx();
     saveSettings();
   });
-  
+
   checkDelay?.addEventListener('change', (e: Event) => {
     state.delayEnabled = (e.target as HTMLInputElement).checked;
     updateFx();
@@ -1391,22 +1478,34 @@ function setupLegacyLogic() {
     updateFx();
   });
 
-  [reverbLevel, delayLevel, delayTime, delayFeedback].forEach(el => {
+  [reverbLevel, delayLevel, delayTime, delayFeedback].forEach((el) => {
     el?.addEventListener('change', () => saveSettings());
   });
 
   // FX dblclick-to-default
   reverbLevel?.addEventListener('dblclick', () => {
-    state.reverbLevel = 0.4; updateEqUI(); updateFx(); saveSettings();
+    state.reverbLevel = 0.4;
+    updateEqUI();
+    updateFx();
+    saveSettings();
   });
   delayLevel?.addEventListener('dblclick', () => {
-    state.delayLevel = 0.3; updateEqUI(); updateFx(); saveSettings();
+    state.delayLevel = 0.3;
+    updateEqUI();
+    updateFx();
+    saveSettings();
   });
   delayTime?.addEventListener('dblclick', () => {
-    state.delayTime = 0.4; updateEqUI(); updateFx(); saveSettings();
+    state.delayTime = 0.4;
+    updateEqUI();
+    updateFx();
+    saveSettings();
   });
   delayFeedback?.addEventListener('dblclick', () => {
-    state.delayFeedback = 0.3; updateEqUI(); updateFx(); saveSettings();
+    state.delayFeedback = 0.3;
+    updateEqUI();
+    updateFx();
+    saveSettings();
   });
 
   // FX reset buttons
@@ -1414,18 +1513,24 @@ function setupLegacyLogic() {
     state.reverbEnabled = false;
     state.reverbLevel = 0.4;
     state.reverbType = 'hall';
-    updateEqUI(); updateFx(); saveSettings();
+    updateEqUI();
+    updateFx();
+    saveSettings();
   });
   btnDelayReset?.addEventListener('click', () => {
     state.delayEnabled = false;
     state.delayLevel = 0.3;
     state.delayTime = 0.4;
     state.delayFeedback = 0.3;
-    updateEqUI(); updateFx(); saveSettings();
+    updateEqUI();
+    updateFx();
+    saveSettings();
   });
 
   // Speed slider dblclick-to-default
-  speedSlider?.addEventListener('dblclick', () => { setSpeed(1.0); });
+  speedSlider?.addEventListener('dblclick', () => {
+    setSpeed(1.0);
+  });
 
   // Volume bar dblclick-to-default (100%)
   volBar?.addEventListener('dblclick', () => {
@@ -1436,13 +1541,13 @@ function setupLegacyLogic() {
     saveSettings();
   });
 
-  plViewBtns?.forEach(btn => {
+  plViewBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view as 'all' | 'recent' | 'popular';
       if (!view) return;
       state.plView = view;
-      
-      plViewBtns?.forEach(b => b.classList.toggle('active', b === btn));
+
+      plViewBtns?.forEach((b) => b.classList.toggle('active', b === btn));
       updatePlaylistUI();
       saveSettings();
     });
@@ -1454,16 +1559,19 @@ function setupLegacyLogic() {
 
   btnSavePlaylist?.addEventListener('click', async () => {
     const dict = translations[state.lang] || translations.ja;
-    if (!state.tracks.length) { showToast(dict.toast_no_tracks); return; }
+    if (!state.tracks.length) {
+      showToast(dict.toast_no_tracks);
+      return;
+    }
     try {
       const filePath = await dialogSave({
         title: dict.save_playlist,
         defaultPath: 'playlist.json',
-        filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
+        filters: [{ name: 'Audion Playlist', extensions: ['json'] }]
       });
       if (!filePath) return;
 
-      const playlistData = state.tracks.map(t => ({
+      const playlistData = state.tracks.map((t) => ({
         path: t.path,
         name: t.name,
         artist: t.artist || '',
@@ -1487,12 +1595,12 @@ function setupLegacyLogic() {
       const file = await dialogOpen({
         title: dict.load_playlist,
         multiple: false,
-        filters: [{ name: 'Audion Playlist', extensions: ['json'] }],
+        filters: [{ name: 'Audion Playlist', extensions: ['json'] }]
       });
       if (!file) return;
 
       if (!invoke) return;
-      const content = await invoke('read_text_file', { path: file }) as string;
+      const content = (await invoke('read_text_file', { path: file })) as string;
       const tracks = JSON.parse(content);
 
       if (Array.isArray(tracks)) {
@@ -1516,7 +1624,12 @@ function setupLegacyLogic() {
       const files = await dialogOpen({
         title: dict.select_music,
         multiple: true,
-        filters: [{ name: dict.music, extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'aiff', 'wma'] }],
+        filters: [
+          {
+            name: dict.music,
+            extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'opus', 'aiff', 'wma']
+          }
+        ]
       });
       if (!files) return;
       const paths = Array.isArray(files) ? files : [files];
@@ -1533,14 +1646,17 @@ function setupLegacyLogic() {
       const folder = await dialogOpen({
         title: dict.select_folder,
         directory: true,
-        multiple: false,
+        multiple: false
       });
       if (!folder || Array.isArray(folder)) return;
       const entries = await readDirectoryRaw(folder);
-      const normalizedFolder = folder.endsWith('/') || folder.endsWith('\\') ? folder : `${folder}/`;
+      const normalizedFolder =
+        folder.endsWith('/') || folder.endsWith('\\') ? folder : `${folder}/`;
       const paths = (entries as any[])
-        .filter(e => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name))
-        .map(e => `${normalizedFolder}${e.name}`);
+        .filter(
+          (e) => !e.isDirectory && /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(e.name)
+        )
+        .map((e) => `${normalizedFolder}${e.name}`);
       if (paths.length) await addPathsWrapper(paths);
       else showToast(dict.toast_error_none);
     } catch (e) {
@@ -1562,9 +1678,17 @@ function setupLegacyLogic() {
     showToast(dict.toast_cleared);
   });
 
-  seeker?.addEventListener('mousedown', (e: MouseEvent) => { state.seekDrag = true; scrub(e); });
-  document.addEventListener('mousemove', (e: MouseEvent) => { if (state.seekDrag) scrub(e); });
-  document.addEventListener('mouseup', () => { state.seekDrag = false; saveSettings(); });
+  seeker?.addEventListener('mousedown', (e: MouseEvent) => {
+    state.seekDrag = true;
+    scrub(e);
+  });
+  document.addEventListener('mousemove', (e: MouseEvent) => {
+    if (state.seekDrag) scrub(e);
+  });
+  document.addEventListener('mouseup', () => {
+    state.seekDrag = false;
+    saveSettings();
+  });
 
   seeker?.addEventListener('keydown', (e: KeyboardEvent) => {
     if (!audio || !audio.duration) return;
@@ -1573,45 +1697,75 @@ function setupLegacyLogic() {
     saveSettings();
   });
 
-  volBar?.addEventListener('mousedown', (e: MouseEvent) => { state.volDrag = true; setVol(e); });
-  document.addEventListener('mousemove', (e: MouseEvent) => { if (state.volDrag) setVol(e); });
-  document.addEventListener('mouseup', () => { state.volDrag = false; });
+  volBar?.addEventListener('mousedown', (e: MouseEvent) => {
+    state.volDrag = true;
+    setVol(e);
+  });
+  document.addEventListener('mousemove', (e: MouseEvent) => {
+    if (state.volDrag) setVol(e);
+  });
+  document.addEventListener('mouseup', () => {
+    state.volDrag = false;
+  });
 
-  volBar?.addEventListener('wheel', (e: WheelEvent) => {
-    e.preventDefault();
-    let v = state.volume;
-    if (e.deltaY < 0) v = Math.min(1, v + 0.05);
-    else v = Math.max(0, v - 0.05);
-    v = Math.round(v * 100) / 100;
+  volBar?.addEventListener(
+    'wheel',
+    (e: WheelEvent) => {
+      e.preventDefault();
+      let v = state.volume;
+      if (e.deltaY < 0) v = Math.min(1, v + 0.05);
+      else v = Math.max(0, v - 0.05);
+      v = Math.round(v * 100) / 100;
 
-    state.volume = v;
-    state.muted = v === 0;
-    if (audio) audio.volume = v;
-    updateVolBarUI();
-    saveSettings();
-  }, { passive: false });
+      state.volume = v;
+      state.muted = v === 0;
+      if (audio) audio.volume = v;
+      updateVolBarUI();
+      saveSettings();
+    },
+    { passive: false }
+  );
 
   document.addEventListener('keydown', (e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
     if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
     switch (e.key) {
-      case ' ': case 'k': e.preventDefault(); togglePlay(); break;
+      case ' ':
+      case 'k':
+        e.preventDefault();
+        togglePlay();
+        break;
       case 'ArrowRight':
-        if (!target.closest('.seeker') && audio) { e.preventDefault(); audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); }
+        if (!target.closest('.seeker') && audio) {
+          e.preventDefault();
+          audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10);
+        }
         break;
       case 'ArrowLeft':
-        if (!target.closest('.seeker') && audio) { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 10); }
+        if (!target.closest('.seeker') && audio) {
+          e.preventDefault();
+          audio.currentTime = Math.max(0, audio.currentTime - 10);
+        }
         break;
-      case 'n': playNext(); break;
-      case 'p': case 'b': playPrev(); break;
-      case 'm': muteBtn?.click(); break;
-      case 's': shuffleBtn?.click(); break;
-      case 'r': repeatBtn?.click(); break;
+      case 'n':
+        playNext();
+        break;
+      case 'p':
+      case 'b':
+        playPrev();
+        break;
+      case 'm':
+        muteBtn?.click();
+        break;
+      case 's':
+        shuffleBtn?.click();
+        break;
+      case 'r':
+        repeatBtn?.click();
+        break;
     }
   });
 }
-
-
 
 async function setupShortcuts() {
   try {
@@ -1621,22 +1775,28 @@ async function setupShortcuts() {
     const playPauseKeys = ['MediaPlayPause', 'MediaPlay', 'MediaPause'];
     for (const k of playPauseKeys) {
       try {
-        await registerShortcut(k, () => { togglePlay(); });
-      } catch { }
+        await registerShortcut(k, () => {
+          togglePlay();
+        });
+      } catch {}
     }
 
     const nextKeys = ['MediaNextTrack', 'MediaNext'];
     for (const k of nextKeys) {
       try {
-        await registerShortcut(k, () => { playNext(); });
-      } catch { }
+        await registerShortcut(k, () => {
+          playNext();
+        });
+      } catch {}
     }
 
     const prevKeys = ['MediaPrevTrack', 'MediaPrevious', 'MediaPrev'];
     for (const k of prevKeys) {
       try {
-        await registerShortcut(k, () => { playPrev(); });
-      } catch { }
+        await registerShortcut(k, () => {
+          playPrev();
+        });
+      } catch {}
     }
 
     const stopKeys = ['MediaStop', 'MediaStopTrack'];
@@ -1645,9 +1805,8 @@ async function setupShortcuts() {
         await registerShortcut(k, () => {
           resetPlayer();
         });
-      } catch { }
+      } catch {}
     }
-
   } catch (e) {
     console.error('Global shortcut setup failed', e);
   }
@@ -1669,7 +1828,9 @@ async function setupDragDrop() {
       dropOverlay?.classList.remove('active');
       const { paths } = event.payload;
       if (paths && paths.length) {
-        const musicPaths = paths.filter((p: string) => /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(p));
+        const musicPaths = paths.filter((p: string) =>
+          /\.(mp3|flac|wav|ogg|aac|m4a|opus|aiff|wma)$/i.test(p)
+        );
         if (musicPaths.length) await addPathsWrapper(musicPaths);
         else showToast(translations[state.lang].toast_error_generic);
       }
@@ -1684,7 +1845,7 @@ async function setupDragDrop() {
     });
   } else {
     let dragCounter = 0;
-    document.addEventListener('dragenter', e => {
+    document.addEventListener('dragenter', (e) => {
       dragCounter++;
       e.preventDefault();
       dropOverlay?.classList.add('active');
@@ -1693,15 +1854,18 @@ async function setupDragDrop() {
       dragCounter--;
       if (dragCounter === 0) dropOverlay?.classList.remove('active');
     });
-    document.addEventListener('dragover', e => {
+    document.addEventListener('dragover', (e) => {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     });
-    document.addEventListener('drop', e => {
+    document.addEventListener('drop', (e) => {
       e.preventDefault();
       dragCounter = 0;
       dropOverlay?.classList.remove('active');
-      showToast("Absolute paths are only available in Tauri. Use the 'Files' button or run via 'npm run tauri dev'.", 5000);
+      showToast(
+        "Absolute paths are only available in Tauri. Use the 'Files' button or run via 'npm run tauri dev'.",
+        5000
+      );
     });
   }
 }
@@ -1715,22 +1879,22 @@ if (rootEl) {
 
 // Legacy initialization logic
 (async () => {
-  console.log("Initialization started...");
+  console.log('Initialization started...');
   if (isTauri) {
     try {
       const win = getCurrentWebviewWindow();
       await win.show();
       windowShown = true;
-      console.log("Window shown.");
+      console.log('Window shown.');
     } catch (e) {
-      console.error("Failed to show window at start:", e);
+      console.error('Failed to show window at start:', e);
     }
   }
 
   try {
     // Wait for React to render elements
-    await new Promise(resolve => setTimeout(resolve, 50));
-    console.log("DOM elements should be ready.");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    console.log('DOM elements should be ready.');
 
     // Initialize top-level variables after elements are in the DOM
     audio = document.getElementById('audio') as HTMLAudioElement | null;
@@ -1816,7 +1980,9 @@ if (rootEl) {
     eqTabBtns = document.querySelectorAll('.eq-tab-btn') as NodeListOf<HTMLButtonElement>;
     tabContents = document.querySelectorAll('.tab-content') as NodeListOf<HTMLDivElement>;
 
-    settingsNavBtns = document.querySelectorAll('.settings-nav-btn') as NodeListOf<HTMLButtonElement>;
+    settingsNavBtns = document.querySelectorAll(
+      '.settings-nav-btn'
+    ) as NodeListOf<HTMLButtonElement>;
     settingsSections = document.querySelectorAll('.settings-section') as NodeListOf<HTMLDivElement>;
 
     compThreshold = document.getElementById('compThreshold') as HTMLInputElement | null;
@@ -1898,7 +2064,7 @@ if (rootEl) {
     initCustomSelects();
 
     state.version = await getAppVersionSafe();
-    console.log("Audion Version Initialized:", state.version);
+    console.log('Audion Version Initialized:', state.version);
     if (verEl) verEl.textContent = state.version;
 
     // Run legacy setup (attaches listeners to the now-available elements)
@@ -1920,18 +2086,18 @@ if (rootEl) {
       handleDeepLink(event.payload);
     });
 
-    const initialArgs = await invoke('get_initial_args') as string[];
+    const initialArgs = (await invoke('get_initial_args')) as string[];
     handleFileOpen(initialArgs);
     handleDeepLink(initialArgs);
 
     function handleDeepLink(urls: any) {
       if (!urls) return;
-      console.log("Deep link received:", urls);
+      console.log('Deep link received:', urls);
       const urlList = Array.isArray(urls) ? urls : [urls];
-      urlList.forEach(url => {
+      urlList.forEach((url) => {
         if (!url || typeof url !== 'string') return;
         const lowerUrl = url.toLowerCase().replace(/\/$/, '');
-        console.log("Processing URL:", lowerUrl);
+        console.log('Processing URL:', lowerUrl);
 
         // Map of paths to tab IDs
         const tabMap: Record<string, string> = {
@@ -1958,10 +2124,12 @@ if (rootEl) {
           if (!settingsModal?.classList.contains('active')) {
             btnSettings?.click();
           }
-          
+
           // Switch to target tab
           setTimeout(() => {
-            const targetBtn = Array.from(settingsNavBtns || []).find(b => b.dataset.tab === targetTab);
+            const targetBtn = Array.from(settingsNavBtns || []).find(
+              (b) => b.dataset.tab === targetTab
+            );
             if (targetBtn) {
               targetBtn.click();
             }
@@ -1972,7 +2140,7 @@ if (rootEl) {
 
     async function handleFileOpen(paths: any) {
       if (Array.isArray(paths) && paths.length > 0) {
-        const filtered = paths.filter(p => !p.endsWith('.exe') && p.includes('.'));
+        const filtered = paths.filter((p) => !p.endsWith('.exe') && p.includes('.'));
         if (filtered.length > 0) {
           const oldLength = state.tracks.length;
           await addPathsWrapper(filtered);
@@ -1990,7 +2158,7 @@ if (rootEl) {
     populatePresetSelect();
     await loadPlaylist();
   } catch (e) {
-    console.error("Init Error:", e);
+    console.error('Init Error:', e);
   } finally {
     if (isTauri) showApp();
   }

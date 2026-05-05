@@ -68,7 +68,7 @@ export function updateTrackUI(track: Track): void {
     const wrap = trackTitle.parentElement;
     if (wrap && trackTitle.scrollWidth > wrap.clientWidth + 2) trackTitle.classList.add('marquee');
 
-    trackTitle.querySelectorAll('.pl-badge').forEach(b => b.remove());
+    trackTitle.querySelectorAll('.pl-badge').forEach((b) => b.remove());
     const ext = track.path.split('.').pop()?.toUpperCase();
     if (ext && ext.length < 5) {
       const badge = document.createElement('span');
@@ -137,10 +137,10 @@ export function initContextMenu(onReorder: (from: number, to: number) => void): 
     { id: 'cmMoveUp', action: () => cmReorderFn?.(cmIndex, cmIndex - 1) },
     { id: 'cmMoveDown', action: () => cmReorderFn?.(cmIndex, cmIndex + 1) },
     { id: 'cmMoveTop', action: () => cmReorderFn?.(cmIndex, 0) },
-    { id: 'cmMoveBottom', action: () => cmReorderFn?.(cmIndex, state.tracks.length - 1) },
+    { id: 'cmMoveBottom', action: () => cmReorderFn?.(cmIndex, state.tracks.length - 1) }
   ];
 
-  items.forEach(item => {
+  items.forEach((item) => {
     const el = document.getElementById(item.id);
     if (el) {
       el.onclick = (e) => {
@@ -152,17 +152,14 @@ export function initContextMenu(onReorder: (from: number, to: number) => void): 
   });
 }
 
-export function setupPlaylistRowEvents(
-  row: HTMLLIElement,
-  index: number
-): void {
+export function setupPlaylistRowEvents(row: HTMLLIElement, index: number): void {
   row.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     const cm = document.getElementById('contextMenu');
     if (!cm) return;
 
     cmIndex = index;
-    
+
     const canReorder = state.plView === 'all';
 
     // Disable buttons if move is not possible
@@ -170,22 +167,26 @@ export function setupPlaylistRowEvents(
     const btnDown = document.getElementById('cmMoveDown');
     const btnTop = document.getElementById('cmMoveTop');
     const btnBottom = document.getElementById('cmMoveBottom');
-    
-    if (btnUp) (btnUp as HTMLElement).style.opacity = (!canReorder || index === 0) ? '0.3' : '1';
-    if (btnUp) (btnUp as HTMLElement).style.pointerEvents = (!canReorder || index === 0) ? 'none' : 'auto';
-    
-    if (btnTop) (btnTop as HTMLElement).style.opacity = (!canReorder || index === 0) ? '0.3' : '1';
-    if (btnTop) (btnTop as HTMLElement).style.pointerEvents = (!canReorder || index === 0) ? 'none' : 'auto';
+
+    if (btnUp) (btnUp as HTMLElement).style.opacity = !canReorder || index === 0 ? '0.3' : '1';
+    if (btnUp)
+      (btnUp as HTMLElement).style.pointerEvents = !canReorder || index === 0 ? 'none' : 'auto';
+
+    if (btnTop) (btnTop as HTMLElement).style.opacity = !canReorder || index === 0 ? '0.3' : '1';
+    if (btnTop)
+      (btnTop as HTMLElement).style.pointerEvents = !canReorder || index === 0 ? 'none' : 'auto';
 
     const isLast = index === state.tracks.length - 1;
-    if (btnDown) (btnDown as HTMLElement).style.opacity = (!canReorder || isLast) ? '0.3' : '1';
-    if (btnDown) (btnDown as HTMLElement).style.pointerEvents = (!canReorder || isLast) ? 'none' : 'auto';
+    if (btnDown) (btnDown as HTMLElement).style.opacity = !canReorder || isLast ? '0.3' : '1';
+    if (btnDown)
+      (btnDown as HTMLElement).style.pointerEvents = !canReorder || isLast ? 'none' : 'auto';
 
-    if (btnBottom) (btnBottom as HTMLElement).style.opacity = (!canReorder || isLast) ? '0.3' : '1';
-    if (btnBottom) (btnBottom as HTMLElement).style.pointerEvents = (!canReorder || isLast) ? 'none' : 'auto';
+    if (btnBottom) (btnBottom as HTMLElement).style.opacity = !canReorder || isLast ? '0.3' : '1';
+    if (btnBottom)
+      (btnBottom as HTMLElement).style.pointerEvents = !canReorder || isLast ? 'none' : 'auto';
 
     cm.style.display = 'block';
-    
+
     const menuWidth = cm.offsetWidth;
     const menuHeight = cm.offsetHeight;
     const winWidth = window.innerWidth;
@@ -206,19 +207,21 @@ export function setupPlaylistRowEvents(
 
 export function renderPlaylist(
   playlistEl: HTMLElement | null,
-  uiTracks: {track: Track, globalIdx: number}[],
+  uiTracks: { track: Track; globalIdx: number }[],
   onRowClick: (e: MouseEvent, index: number) => void,
   filter = ''
 ): void {
   if (!playlistEl) return;
   playlistEl.innerHTML = '';
-  
-  const filteredTracks = uiTracks.filter(item => {
+
+  const filteredTracks = uiTracks.filter((item) => {
     if (!filter) return true;
     const track = item.track;
     const f = filter.toLowerCase();
-    return track.name.toLowerCase().includes(f) || 
-           (track.artist && track.artist.toLowerCase().includes(f));
+    return (
+      track.name.toLowerCase().includes(f) ||
+      (track.artist && track.artist.toLowerCase().includes(f))
+    );
   });
 
   filteredTracks.forEach((item, displayIdx) => {
@@ -234,7 +237,7 @@ function applyThemeColor(c: RGB): void {
   const rgb = `${c.r}, ${c.g}, ${c.b}`;
   root.style.setProperty('--accent-color', `rgb(${rgb})`);
   root.style.setProperty('--glow-color', `rgba(${rgb}, 0.5)`);
-  
+
   const light = lightenColor(c, 1.2);
   setVisualizerColors(`rgb(${rgb})`, `rgb(${light.r}, ${light.g}, ${light.b})`);
 }

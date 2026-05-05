@@ -52,7 +52,7 @@ export function updateEqUI(
 
   if (checkEq) checkEq.checked = enabled;
   const dict = translations[state.lang] || translations.ja;
-  if (eqStatusText) eqStatusText.textContent = enabled ? (dict.eq_on || "ON") : (dict.eq_off || "OFF");
+  if (eqStatusText) eqStatusText.textContent = enabled ? dict.eq_on || 'ON' : dict.eq_off || 'OFF';
 
   const hdrCtrl = document.getElementById('eqHeaderControls');
   if (hdrCtrl) {
@@ -78,7 +78,7 @@ export function updateEqUI(
   if (checkReverb) checkReverb.checked = state.reverbEnabled;
   if (reverbLevel) reverbLevel.value = state.reverbLevel.toString();
   if (reverbType) reverbType.value = state.reverbType;
-  
+
   if (checkDelay) checkDelay.checked = state.delayEnabled;
   if (delayLevel) delayLevel.value = state.delayLevel.toString();
   if (delayTime) delayTime.value = state.delayTime.toString();
@@ -90,6 +90,11 @@ export function updateEqUI(
   updateCompSettings(state.compSettings, state.compEnabled);
   updateEffectsSettings(
     { enabled: state.reverbEnabled, level: state.reverbLevel, type: state.reverbType },
-    { enabled: state.delayEnabled, level: state.delayLevel, time: state.delayTime, feedback: state.delayFeedback }
+    {
+      enabled: state.delayEnabled,
+      level: state.delayLevel,
+      time: state.delayTime,
+      feedback: state.delayFeedback
+    }
   );
 }

@@ -10,7 +10,12 @@ export function fmt(s: number): string {
 }
 
 export function esc(s: string | number): string {
-  return s.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s
+    .toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;

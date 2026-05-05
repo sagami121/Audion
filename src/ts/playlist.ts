@@ -9,24 +9,24 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const metaCache = new Map();
 
-export function getPlaylistView(): {track: Track, globalIdx: number}[] {
+export function getPlaylistView(): { track: Track; globalIdx: number }[] {
   let list = state.tracks.map((track, globalIdx) => ({ track, globalIdx }));
-  
+
   if (state.plView === 'recent') {
     list.sort((a, b) => b.track.addedAt - a.track.addedAt);
   } else if (state.plView === 'popular') {
     list.sort((a, b) => (b.track.playCount || 0) - (a.track.playCount || 0));
   } else if (state.plView === 'favorites') {
-    list = list.filter(item => item.track.favorite);
+    list = list.filter((item) => item.track.favorite);
   }
-  
+
   return list;
 }
 
 export async function addPaths(
-  paths: any[], 
-  isInitial = false, 
-  playlist: HTMLUListElement | null, 
+  paths: any[],
+  isInitial = false,
+  playlist: HTMLUListElement | null,
   plSearch: HTMLInputElement | null,
   dropHint: HTMLDivElement | null,
   onRowClick: (e: any, index: number) => void,
@@ -44,7 +44,7 @@ export async function addPaths(
     const playCount = isObj && item.playCount ? item.playCount : 0;
 
     const normPath = normalizePath(pathValue).toLowerCase();
-    if (state.tracks.some(t => normalizePath(t.path).toLowerCase() === normPath)) {
+    if (state.tracks.some((t) => normalizePath(t.path).toLowerCase() === normPath)) {
       skipped++;
       continue;
     }
@@ -70,9 +70,10 @@ export async function addPaths(
         });
 
         const idx = state.tracks.length - 1;
-        const filter = plSearch?.value.toLowerCase() || "";
+        const filter = plSearch?.value.toLowerCase() || '';
         const track = state.tracks[idx];
-        const matchesFilter = !filter ||
+        const matchesFilter =
+          !filter ||
           track.name.toLowerCase().includes(filter) ||
           (track.artist && track.artist.toLowerCase().includes(filter));
 
@@ -90,7 +91,8 @@ export async function addPaths(
   }
   updateCount();
   if (added > 0) {
-    if (state.plView !== 'all') ui.renderPlaylist(playlist, getPlaylistView(), onRowClick, plSearch?.value || "");
+    if (state.plView !== 'all')
+      ui.renderPlaylist(playlist, getPlaylistView(), onRowClick, plSearch?.value || '');
     const dict = translations[state.lang] || translations.ja;
     if (dropHint) dropHint.classList.add('hidden');
     if (!isInitial) {
@@ -138,12 +140,14 @@ export async function loadPlaylist(
       try {
         const storedItems = JSON.parse(stored);
         if (storedItems.length) {
-          const items = storedItems.map((item: any) => 
+          const items = storedItems.map((item: any) =>
             typeof item === 'string' ? { path: item, addedAt: Date.now(), playCount: 0 } : item
           );
           await addPathsFn(items, true);
         }
-      } catch (e) { console.error('Load failed', e); }
+      } catch (e) {
+        console.error('Load failed', e);
+      }
     }
   }
 

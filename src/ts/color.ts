@@ -8,8 +8,8 @@ export interface RGB {
 }
 
 /**
- * 
- * @param {HTMLImageElement} img 
+ *
+ * @param {HTMLImageElement} img
  * @returns {Promise<RGB | null>}
  */
 export async function getDominantColor(img: HTMLImageElement): Promise<RGB | null> {
@@ -24,7 +24,9 @@ export async function getDominantColor(img: HTMLImageElement): Promise<RGB | nul
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
-    let r = 0, g = 0, b = 0;
+    let r = 0,
+      g = 0,
+      b = 0;
     let count = 0;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -52,24 +54,34 @@ export async function getDominantColor(img: HTMLImageElement): Promise<RGB | nul
 
     return boostSaturation(r, g, b);
   } catch (e) {
-    console.error("Color extraction failed:", e);
+    console.error('Color extraction failed:', e);
     return null;
   }
 }
 
 function boostSaturation(r: number, g: number, b: number): RGB {
-  r /= 255; g /= 255; b /= 255;
+  r /= 255;
+  g /= 255;
+  b /= 255;
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  let h = 0, s = 0, l = (max + min) / 2;
+  let h = 0,
+    s = 0,
+    l = (max + min) / 2;
 
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
     }
     h /= 6;
   }

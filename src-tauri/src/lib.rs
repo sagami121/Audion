@@ -1,18 +1,19 @@
-use std::fs;
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use lofty::prelude::*;
 use lofty::probe::Probe;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::fs;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, AppHandle, Emitter, State};
-use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
 mod discord_rpc;
-use discord_rpc::{DiscordState, set_discord_presence, clear_discord_presence};
+use discord_presence::Client;
+use discord_rpc::{clear_discord_presence, set_discord_presence, DiscordState};
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
-use discord_presence::Client;
 #[cfg(target_os = "macos")]
 use window_vibrancy::NSVisualEffectMaterial;
 use window_vibrancy::{apply_blur, apply_mica};
@@ -40,8 +41,8 @@ mod windows_taskbar {
         COINIT_APARTMENTTHREADED,
     };
     use windows::Win32::UI::Shell::{
-        DefSubclassProc, ITaskbarList3, SetWindowSubclass, TaskbarList, THB_FLAGS, THB_ICON,
-        THB_TOOLTIP, THBF_ENABLED, THBN_CLICKED, THUMBBUTTON,
+        DefSubclassProc, ITaskbarList3, SetWindowSubclass, TaskbarList, THBF_ENABLED, THBN_CLICKED,
+        THB_FLAGS, THB_ICON, THB_TOOLTIP, THUMBBUTTON,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateIconIndirect, RegisterWindowMessageW, HICON, ICONINFO, WM_COMMAND,
@@ -190,7 +191,11 @@ mod windows_taskbar {
         let prev_icon = get_prev_icon()?;
         let next_icon = get_next_icon()?;
         let is_playing = IS_PLAYING.load(Ordering::Relaxed);
-        let middle_icon = if is_playing { get_pause_icon()? } else { get_play_icon()? };
+        let middle_icon = if is_playing {
+            get_pause_icon()?
+        } else {
+            get_play_icon()?
+        };
         let middle_tip = if is_playing { "一時停止" } else { "再生" };
 
         Ok([
@@ -206,9 +211,8 @@ mod windows_taskbar {
                 .ok()
                 .map_err(|e| e.to_string())?;
 
-            let taskbar: ITaskbarList3 =
-                CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
-                    .map_err(|e| e.to_string())?;
+            let taskbar: ITaskbarList3 = CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
+                .map_err(|e| e.to_string())?;
             taskbar.HrInit().map_err(|e| e.to_string())?;
 
             let buttons = make_buttons()?;
@@ -290,9 +294,8 @@ mod windows_taskbar {
             CoInitializeEx(None, COINIT_APARTMENTTHREADED)
                 .ok()
                 .map_err(|e| e.to_string())?;
-            let taskbar: ITaskbarList3 =
-                CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
-                    .map_err(|e| e.to_string())?;
+            let taskbar: ITaskbarList3 = CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
+                .map_err(|e| e.to_string())?;
             taskbar.HrInit().map_err(|e| e.to_string())?;
             let buttons = make_buttons()?;
             taskbar
@@ -327,6 +330,19 @@ struct ReleaseInfo {
 
 #[derive(Serialize)]
 struct ReleaseAsset {
+    name: String,
+    browser_download_url: String,
+    sha256: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct GitHubRelease {
+    body: Option<String>,
+    assets: Vec<GitHubReleaseAsset>,
+}
+
+#[derive(Clone, Deserialize)]
+struct GitHubReleaseAsset {
     name: String,
     browser_download_url: String,
 }
@@ -374,9 +390,15 @@ fn get_file_metadata(path: String) -> serde_json::Value {
         duration = probed.properties().duration().as_secs_f64();
         let tag = probed.primary_tag().or_else(|| probed.first_tag());
         if let Some(tag) = tag {
-            if let Some(t) = tag.title().as_deref() { title = t.to_string(); }
-            if let Some(a) = tag.artist().as_deref() { artist = a.to_string(); }
-            if let Some(al) = tag.album().as_deref() { album = al.to_string(); }
+            if let Some(t) = tag.title().as_deref() {
+                title = t.to_string();
+            }
+            if let Some(a) = tag.artist().as_deref() {
+                artist = a.to_string();
+            }
+            if let Some(al) = tag.album().as_deref() {
+                album = al.to_string();
+            }
 
             if let Some(pic) = tag.pictures().first() {
                 let data = pic.data();
@@ -449,17 +471,29 @@ fn fetch_latest_release_info() -> Result<ReleaseInfo, String> {
         .ok_or_else(|| "Latest release tag not found".to_string())?;
 
     let version = tag.trim_start_matches(['v', 'V']);
-    let body = fetch_release_notes_from_atom(&client, &tag).unwrap_or_default();
-    let assets = vec![
-        ReleaseAsset {
-            name: format!("Audion_{}_x64_ja-JP.msi", version),
-            browser_download_url: format!("https://github.com/sagami121/Audion/releases/download/{}/Audion_{}_x64_ja-JP.msi", tag, version),
-        },
-        ReleaseAsset {
-            name: format!("Audion_v{}_x64_ja-JP.msi", version),
-            browser_download_url: format!("https://github.com/sagami121/Audion/releases/download/{}/Audion_v{}_x64_ja-JP.msi", tag, version),
-        },
-    ];
+    let github_release = fetch_release_from_api(&client, &tag).ok();
+    let body = github_release
+        .as_ref()
+        .and_then(|release| release.body.clone())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| fetch_release_notes_from_atom(&client, &tag).unwrap_or_default());
+
+    let assets = if let Some(release) = github_release {
+        build_release_assets(&client, &release.assets)?
+    } else {
+        vec![
+            ReleaseAsset {
+                name: format!("Audion_{}_x64_ja-JP.msi", version),
+                browser_download_url: format!("https://github.com/sagami121/Audion/releases/download/{}/Audion_{}_x64_ja-JP.msi", tag, version),
+                sha256: None,
+            },
+            ReleaseAsset {
+                name: format!("Audion_v{}_x64_ja-JP.msi", version),
+                browser_download_url: format!("https://github.com/sagami121/Audion/releases/download/{}/Audion_v{}_x64_ja-JP.msi", tag, version),
+                sha256: None,
+            },
+        ]
+    };
 
     Ok(ReleaseInfo {
         tag_name: tag,
@@ -468,7 +502,119 @@ fn fetch_latest_release_info() -> Result<ReleaseInfo, String> {
     })
 }
 
-fn fetch_release_notes_from_atom(client: &reqwest::blocking::Client, tag: &str) -> Result<String, String> {
+fn fetch_release_from_api(
+    client: &reqwest::blocking::Client,
+    tag: &str,
+) -> Result<GitHubRelease, String> {
+    let api_url = format!(
+        "https://api.github.com/repos/sagami121/Audion/releases/tags/{}",
+        tag
+    );
+    let response = client.get(api_url).send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub API {}", response.status()));
+    }
+
+    response.json::<GitHubRelease>().map_err(|e| e.to_string())
+}
+
+fn build_release_assets(
+    client: &reqwest::blocking::Client,
+    github_assets: &[GitHubReleaseAsset],
+) -> Result<Vec<ReleaseAsset>, String> {
+    let checksum_assets = collect_checksum_assets(client, github_assets)?;
+
+    Ok(github_assets
+        .iter()
+        .filter(|asset| is_installer_asset(&asset.name))
+        .map(|asset| ReleaseAsset {
+            name: asset.name.clone(),
+            browser_download_url: asset.browser_download_url.clone(),
+            sha256: find_sha256_for_asset(&asset.name, &checksum_assets),
+        })
+        .collect())
+}
+
+fn is_installer_asset(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    lower.ends_with(".msi") || lower.ends_with(".exe")
+}
+
+fn is_checksum_asset(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    lower.ends_with(".sha256")
+        || lower.ends_with(".sha256sum")
+        || lower == "sha256sums"
+        || lower == "sha256sums.txt"
+        || lower == "checksums.txt"
+}
+
+fn collect_checksum_assets(
+    client: &reqwest::blocking::Client,
+    github_assets: &[GitHubReleaseAsset],
+) -> Result<Vec<(String, String)>, String> {
+    let mut checksums = Vec::new();
+
+    for asset in github_assets
+        .iter()
+        .filter(|asset| is_checksum_asset(&asset.name))
+    {
+        let response = client
+            .get(&asset.browser_download_url)
+            .send()
+            .map_err(|e| e.to_string())?;
+        if !response.status().is_success() {
+            return Err(format!("Checksum download failed: {}", response.status()));
+        }
+        checksums.push((
+            asset.name.clone(),
+            response.text().map_err(|e| e.to_string())?,
+        ));
+    }
+
+    Ok(checksums)
+}
+
+fn find_sha256_for_asset(asset_name: &str, checksum_assets: &[(String, String)]) -> Option<String> {
+    for (checksum_name, content) in checksum_assets {
+        let lower_name = checksum_name.to_lowercase();
+        let lower_asset = asset_name.to_lowercase();
+        if (lower_name == format!("{}.sha256", lower_asset)
+            || lower_name == format!("{}.sha256sum", lower_asset))
+            && extract_sha256(content).is_some()
+        {
+            return extract_sha256(content);
+        }
+
+        if let Some(hash) = extract_sha256_for_file(content, asset_name) {
+            return Some(hash);
+        }
+    }
+
+    None
+}
+
+fn extract_sha256_for_file(content: &str, asset_name: &str) -> Option<String> {
+    let normalized_asset = asset_name.to_lowercase();
+    content.lines().find_map(|line| {
+        if !line.to_lowercase().contains(&normalized_asset) {
+            return None;
+        }
+        extract_sha256(line)
+    })
+}
+
+fn extract_sha256(value: &str) -> Option<String> {
+    value
+        .split(|ch: char| !ch.is_ascii_hexdigit())
+        .find(|part| part.len() == 64)
+        .map(|part| part.to_lowercase())
+}
+
+fn fetch_release_notes_from_atom(
+    client: &reqwest::blocking::Client,
+    tag: &str,
+) -> Result<String, String> {
     let atom_url = "https://github.com/sagami121/Audion/releases.atom";
     let response = client.get(atom_url).send().map_err(|e| e.to_string())?;
     if !response.status().is_success() {
@@ -557,7 +703,13 @@ fn html_to_text(input: &str) -> String {
 }
 
 #[tauri::command]
-fn download_installer(asset_url: String, file_name: String) -> Result<String, String> {
+fn download_installer(
+    asset_url: String,
+    file_name: String,
+    expected_sha256: String,
+) -> Result<String, String> {
+    let expected_sha256 = normalize_sha256(&expected_sha256)
+        .ok_or_else(|| "Installer checksum is missing".to_string())?;
     let client = reqwest::blocking::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .user_agent("Audion-Updater")
@@ -570,12 +722,34 @@ fn download_installer(asset_url: String, file_name: String) -> Result<String, St
     }
 
     let bytes = response.bytes().map_err(|e| e.to_string())?;
+    let actual_sha256 = calculate_sha256(&bytes);
+    if actual_sha256 != expected_sha256 {
+        return Err(format!(
+            "Installer checksum mismatch: expected {}, got {}",
+            expected_sha256, actual_sha256
+        ));
+    }
+
     let path = std::env::temp_dir().join(&file_name);
     fs::write(&path, &bytes).map_err(|e| e.to_string())?;
 
     path.into_os_string()
         .into_string()
         .map_err(|_| "Failed to resolve installer path".to_string())
+}
+
+fn normalize_sha256(value: &str) -> Option<String> {
+    let normalized = value.trim().to_lowercase();
+    if normalized.len() == 64 && normalized.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        Some(normalized)
+    } else {
+        None
+    }
+}
+
+fn calculate_sha256(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    format!("{:x}", digest)
 }
 
 #[tauri::command]
@@ -613,7 +787,11 @@ fn run_installer(app: AppHandle, path: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn set_hw_accel_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
-    let path = app.path().app_config_dir().map_err(|e| e.to_string())?.join("disable_gpu");
+    let path = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?
+        .join("disable_gpu");
     if enabled {
         if path.exists() {
             fs::remove_file(path).map_err(|e| e.to_string())?;
@@ -631,7 +809,9 @@ fn is_hw_accel_disabled() -> bool {
     #[cfg(target_os = "windows")]
     {
         if let Ok(app_data) = std::env::var("APPDATA") {
-            let path = std::path::Path::new(&app_data).join("com.sagami121.audion").join("disable_gpu");
+            let path = std::path::Path::new(&app_data)
+                .join("com.sagami121.audion")
+                .join("disable_gpu");
             return path.exists();
         }
     }
@@ -655,32 +835,57 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new()
-            .with_shortcuts(["MediaPlayPause", "MediaTrackNext", "MediaTrackPrevious", "MediaStop"]).expect("failed to register media shortcuts")
-            .with_handler(|app, shortcut, event| {
-                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                    match shortcut.to_string().to_lowercase().as_str() {
-                        "mediaplaypause" | "mediaplay" | "mediapause" => { let _ = app.emit("tray-play-pause", ()); }
-                        "mediatracknext" | "medianexttrack" => { let _ = app.emit("tray-next", ()); }
-                        "mediatrackprevious" | "mediaprevtrack" => { let _ = app.emit("tray-prev", ()); }
-                        "mediastop" => { let _ = app.emit("tray-stop", ()); }
-                        _ => {}
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcuts([
+                    "MediaPlayPause",
+                    "MediaTrackNext",
+                    "MediaTrackPrevious",
+                    "MediaStop",
+                ])
+                .expect("failed to register media shortcuts")
+                .with_handler(|app, shortcut, event| {
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        match shortcut.to_string().to_lowercase().as_str() {
+                            "mediaplaypause" | "mediaplay" | "mediapause" => {
+                                let _ = app.emit("tray-play-pause", ());
+                            }
+                            "mediatracknext" | "medianexttrack" => {
+                                let _ = app.emit("tray-next", ());
+                            }
+                            "mediatrackprevious" | "mediaprevtrack" => {
+                                let _ = app.emit("tray-prev", ());
+                            }
+                            "mediastop" => {
+                                let _ = app.emit("tray-stop", ());
+                            }
+                            _ => {}
+                        }
                     }
-                }
-            })
-            .build())
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // Filter music files for file-open (skip the first arg which is usually the exe path)
-            let music_files: Vec<String> = args.iter().skip(1).filter(|a| !a.starts_with("audion://")).cloned().collect();
+            let music_files: Vec<String> = args
+                .iter()
+                .skip(1)
+                .filter(|a| !a.starts_with("audion://"))
+                .cloned()
+                .collect();
             if !music_files.is_empty() {
                 let _ = app.emit("file-open", music_files);
             }
 
             // Filter deep links for audion://
-            let deep_links: Vec<String> = args.iter().filter(|a| a.starts_with("audion://")).cloned().collect();
+            let deep_links: Vec<String> = args
+                .iter()
+                .filter(|a| a.starts_with("audion://"))
+                .cloned()
+                .collect();
             if !deep_links.is_empty() {
                 let _ = app.emit("deep-link", deep_links);
             }
@@ -702,15 +907,20 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 use window_vibrancy::NSVisualEffectMaterial;
-                let _ = window_vibrancy::apply_vibrancy(&window, NSVisualEffectMaterial::UnderWindowBackground, None, None);
+                let _ = window_vibrancy::apply_vibrancy(
+                    &window,
+                    NSVisualEffectMaterial::UnderWindowBackground,
+                    None,
+                    None,
+                );
             }
 
             let state = app.state::<DiscordState>();
             let client_ptr = state.client.clone();
-            
+
             println!("Initializing Discord client in setup...");
             let mut client = Client::new(1493885713463251014u64);
-            
+
             client.on_ready(|_ctx| {
                 println!("Discord RPC: Successfully connected!");
             });
@@ -725,7 +935,7 @@ pub fn run() {
                 Ok(mut lock) => {
                     *lock = Some(client);
                     println!("Discord client instance stored in state.");
-                },
+                }
                 Err(_) => {
                     let client_ptr_async = client_ptr.clone();
                     tauri::async_runtime::spawn(async move {
@@ -760,19 +970,18 @@ pub fn run() {
 
             let quit_i = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "表示", true, None::<&str>)?;
-            let play_i = MenuItem::with_id(app, "tray-play-pause", "再生 / 一時停止", true, None::<&str>)?;
+            let play_i = MenuItem::with_id(
+                app,
+                "tray-play-pause",
+                "再生 / 一時停止",
+                true,
+                None::<&str>,
+            )?;
             let next_i = MenuItem::with_id(app, "tray-next", "次の曲", true, None::<&str>)?;
             let prev_i = MenuItem::with_id(app, "tray-prev", "前の曲", true, None::<&str>)?;
             let sep = tauri::menu::PredefinedMenuItem::separator(app)?;
 
-            let menu = Menu::with_items(app, &[
-                &play_i,
-                &next_i,
-                &prev_i,
-                &sep,
-                &show_i,
-                &quit_i
-            ])?;
+            let menu = Menu::with_items(app, &[&play_i, &next_i, &prev_i, &sep, &show_i, &quit_i])?;
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -830,4 +1039,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

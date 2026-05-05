@@ -12,15 +12,17 @@ export async function loadLyrics(path: string, lyricsInner: HTMLDivElement | nul
     const lines = lrc.split('\n');
     const timeReg = /\[(\d+):(\d+\.\d+)\]/;
 
-    state.lyrics = lines.map(line => {
-      const match = timeReg.exec(line);
-      if (match) {
-        const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
-        const text = line.replace(timeReg, '').trim();
-        return { time, text };
-      }
-      return null;
-    }).filter((l: any): l is { time: number; text: string } => !!(l && l.text));
+    state.lyrics = lines
+      .map((line) => {
+        const match = timeReg.exec(line);
+        if (match) {
+          const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
+          const text = line.replace(timeReg, '').trim();
+          return { time, text };
+        }
+        return null;
+      })
+      .filter((l: any): l is { time: number; text: string } => !!(l && l.text));
 
     state.lyrics.forEach((l, i) => {
       const div = document.createElement('div');
@@ -31,7 +33,8 @@ export async function loadLyrics(path: string, lyricsInner: HTMLDivElement | nul
     });
   } catch (e) {
     const dict = translations[state.lang] || translations.ja;
-    if (lyricsInner) lyricsInner.innerHTML = `<div class="lyric-line" style="opacity:0.5">${dict.no_lyrics}</div>`;
+    if (lyricsInner)
+      lyricsInner.innerHTML = `<div class="lyric-line" style="opacity:0.5">${dict.no_lyrics}</div>`;
   }
 }
 
@@ -57,7 +60,10 @@ export function updateLyrics(time: number, lyricsInner: HTMLDivElement | null): 
     if (index !== -1 && lines[index]) {
       const activeLine = lines[index];
       if (lyricsInner.parentElement) {
-        const offset = lyricsInner.parentElement.clientHeight / 2 - activeLine.offsetTop - activeLine.clientHeight / 2;
+        const offset =
+          lyricsInner.parentElement.clientHeight / 2 -
+          activeLine.offsetTop -
+          activeLine.clientHeight / 2;
         lyricsInner.style.transform = `translateY(${offset}px)`;
       }
     }

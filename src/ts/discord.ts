@@ -52,22 +52,22 @@ export async function updateDiscordRPC(): Promise<void> {
 
     if (!track || !isPlaying) {
       if (!isPlaying && track) {
-          console.log('Showing paused state on Discord');
-          await invoke('set_discord_presence', {
-              details: track.name || 'Unknown Track',
-              presenceState: `Paused — ${track.artist || 'Unknown Artist'}`,
-              isPlaying: false
-          });
+        console.log('Showing paused state on Discord');
+        await invoke('set_discord_presence', {
+          details: track.name || 'Unknown Track',
+          presenceState: `Paused — ${track.artist || 'Unknown Artist'}`,
+          isPlaying: false
+        });
       } else {
-          console.log('Clearing Discord presence');
-          await invoke('clear_discord_presence');
+        console.log('Clearing Discord presence');
+        await invoke('clear_discord_presence');
       }
       return;
     }
 
     // Set stable start time if it's a new track or just resumed
     if (!state.trackStartTime) {
-        state.trackStartTime = Math.floor(Date.now() / 1000);
+      state.trackStartTime = Math.floor(Date.now() / 1000);
     }
 
     console.log('Updating Discord presence to playing:', track.name);

@@ -4,6 +4,6 @@ export interface AppConfig {
 }
 
 export const CONFIG: AppConfig = {
-  REPORT_API_URL: "https://report2.sagami886.workers.dev/",
-  API_KEY: ""
+  REPORT_API_URL: 'https://report2.sagami886.workers.dev/',
+  API_KEY: ''
 };
