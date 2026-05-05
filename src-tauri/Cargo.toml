@@ -1,6 +1,6 @@
 [package]
 name = "Audion"
-version = "1.0.2"
+version = "1.0.3"
 description = "Audion — Music Player"
 authors = ["Audion"]
 edition = "2021"
@@ -31,7 +31,8 @@ lofty = "0.21"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+sha2 = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 discord-presence = "0.4.0"
 tokio = { version = "1", features = ["sync", "rt", "macros"] }
 window-vibrancy = "0.6.0"
