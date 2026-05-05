@@ -101,9 +101,9 @@ jobs:
         id: tag_state
         shell: pwsh
         run: |
-          git fetch --tags
           $tagExists = "false"
-          if (git rev-parse --verify "refs/tags/${{ steps.release_info.outputs.tag }}" 2>$null) {
+          $remoteTag = git ls-remote --tags origin "refs/tags/${{ steps.release_info.outputs.tag }}"
+          if (-not [string]::IsNullOrWhiteSpace($remoteTag)) {
             $tagExists = "true"
             Write-Host "Tag ${{ steps.release_info.outputs.tag }} already exists. Reusing it for this release run."
           }
