@@ -146,15 +146,7 @@ function showUpdateToast(releaseInfo: ReleaseInfo): void {
 function findInstallerAsset(releaseInfo: ReleaseInfo): ReleaseAsset | null {
   const assets = releaseInfo.assets || [];
 
-  // 1. Prioritize MSI
-  const msi = assets.find((a) => a.name.toLowerCase().endsWith('.msi'));
-  if (msi) return msi;
-
-  // 2. Fallback to EXE
-  const exe = assets.find((a) => a.name.toLowerCase().endsWith('.exe'));
-  if (exe) return exe;
-
-  return null;
+  return assets.find((a) => a.name.toLowerCase().endsWith('.exe')) || null;
 }
 
 async function downloadAndInstall(releaseInfo: ReleaseInfo): Promise<void> {
@@ -208,7 +200,7 @@ function formatUpdaterError(error: any): string {
     return '最新リリースのタグを取得できません';
   }
   if (normalized.includes('installer asset not found')) {
-    return 'インストーラーが見つかりません (MSI/EXE)';
+    return 'インストーラーが見つかりません (EXE)';
   }
   if (normalized.includes('checksum is missing')) {
     return 'インストーラーのSHA-256チェックサムが見つかりません';

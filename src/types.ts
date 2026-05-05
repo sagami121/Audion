@@ -62,4 +62,7 @@ export interface AppState {
   discordRPCEnabled: boolean;
   trackStartTime: number;
   playlistPosition: 'left' | 'right';
+  abLoopEnabled: boolean;
+  abLoopA: number | null;
+  abLoopB: number | null;
 }

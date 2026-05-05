@@ -505,6 +505,34 @@ input[type='checkbox'] {
   overflow: hidden;
 }
 
+.app.pl-left .sidebar {
+  order: 0;
+  border-right: 1px solid var(--border);
+  border-left: 0;
+}
+
+.app.pl-left .resizer {
+  order: 1;
+}
+
+.app.pl-left .player {
+  order: 2;
+}
+
+.app.pl-right .player {
+  order: 0;
+}
+
+.app.pl-right .resizer {
+  order: 1;
+}
+
+.app.pl-right .sidebar {
+  order: 2;
+  border-right: 0;
+  border-left: 1px solid var(--border);
+}
+
 .sidebar {
   width: var(--sidebar-w);
   height: 100%;
@@ -810,6 +838,22 @@ body.mini-view .ctrl-icon svg {
 body.mini-view .ctrl-md {
   width: 34px;
   height: 34px;
+}
+
+body.mini-view .ab-loop-controls {
+  gap: 2px;
+  padding: 2px;
+}
+
+body.mini-view .ab-loop-btn,
+body.mini-view .ab-loop-clear {
+  width: 24px;
+  height: 24px;
+  font-size: 0.6rem;
+}
+
+body.mini-view .ab-loop-toggle {
+  width: 30px;
 }
 
 body.mini-view .play-btn {
@@ -1597,6 +1641,38 @@ body.mini-view .lyrics-container {
   opacity: 1;
 }
 
+.ab-marker {
+  position: absolute;
+  top: 50%;
+  display: none;
+  width: 2px;
+  height: 16px;
+  border-radius: 999px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  background: var(--accent-color, var(--text));
+  box-shadow: 0 0 8px var(--glow-color, rgba(255, 255, 255, 0.35));
+  z-index: 2;
+}
+
+.ab-marker::after {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: var(--accent-color, var(--text));
+}
+
+.ab-marker-a::after {
+  content: 'A';
+}
+
+.ab-marker-b::after {
+  content: 'B';
+}
+
 .controls-section {
   display: flex;
   align-items: center;
@@ -1689,6 +1765,59 @@ body.light-theme .ctrl-icon svg {
   transition:
     background-color var(--transition),
     color var(--transition);
+}
+
+.ab-loop-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.ab-loop-btn,
+.ab-loop-clear {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background-color var(--transition),
+    color var(--transition),
+    opacity var(--transition);
+}
+
+.ab-loop-toggle {
+  width: 34px;
+  border-radius: 999px;
+}
+
+.ab-loop-btn:hover,
+.ab-loop-clear:hover {
+  background: var(--border-h);
+  color: var(--text);
+}
+
+.ab-loop-btn.active {
+  color: var(--bg-solid);
+  background: var(--accent-color, var(--text));
+}
+
+.ab-loop-btn:disabled,
+.ab-loop-clear:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.ab-loop-clear {
+  font-size: 0.78rem;
 }
 
 .ctrl-icon img {

@@ -56,5 +56,8 @@ export const state: AppState = {
   delayFeedback: saved.delayFeedback !== undefined ? saved.delayFeedback : 0.3,
   discordRPCEnabled: localStorage.getItem('af_discord_rpc') === 'true',
   trackStartTime: 0,
-  playlistPosition: saved.playlistPosition || 'left'
+  playlistPosition: saved.playlistPosition || 'left',
+  abLoopEnabled: false,
+  abLoopA: null,
+  abLoopB: null
 };

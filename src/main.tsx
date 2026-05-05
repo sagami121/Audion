@@ -78,11 +78,17 @@ let nextBtn: HTMLButtonElement | null = null;
 let shuffleBtn: HTMLButtonElement | null = null;
 let repeatBtn: HTMLButtonElement | null = null;
 let repeatBadge: HTMLSpanElement | null = null;
+let btnSetLoopA: HTMLButtonElement | null = null;
+let btnSetLoopB: HTMLButtonElement | null = null;
+let btnToggleAbLoop: HTMLButtonElement | null = null;
+let btnClearAbLoop: HTMLButtonElement | null = null;
 let muteBtn: HTMLButtonElement | null = null;
 let volIcon: HTMLDivElement | null = null;
 let seeker: HTMLDivElement | null = null;
 let seekFill: HTMLDivElement | null = null;
 let seekThumb: HTMLDivElement | null = null;
+let abMarkerA: HTMLDivElement | null = null;
+let abMarkerB: HTMLDivElement | null = null;
 let curTime: HTMLSpanElement | null = null;
 let durTime: HTMLSpanElement | null = null;
 let volBar: HTMLDivElement | null = null;
@@ -423,9 +429,13 @@ function setPlaylistPosition(pos: 'left' | 'right') {
   saveSettings();
 }
 
-function hideSidebarContextMenu() {
+function hideSidebarContextMenu(immediate = false) {
   if (sidebarContextMenu) {
     sidebarContextMenu.classList.remove('active');
+    if (immediate) {
+      sidebarContextMenu.style.display = 'none';
+      return;
+    }
     setTimeout(() => {
       if (sidebarContextMenu && !sidebarContextMenu.classList.contains('active')) {
         sidebarContextMenu.style.display = 'none';
@@ -471,6 +481,82 @@ function updateVolBarUI() {
   volBar.setAttribute('aria-valuenow', Math.round(pct).toString());
   volLbl.textContent = Math.round(pct) + '%';
   updateVolIcon();
+}
+
+function updateAbLoopUI() {
+  const duration = audio?.duration || 0;
+  const hasA = state.abLoopA !== null && duration > 0;
+  const hasB = state.abLoopB !== null && duration > 0;
+
+  if (abMarkerA) {
+    abMarkerA.style.display = hasA ? 'block' : 'none';
+    if (hasA) abMarkerA.style.left = `${Math.min(100, (state.abLoopA! / duration) * 100)}%`;
+  }
+  if (abMarkerB) {
+    abMarkerB.style.display = hasB ? 'block' : 'none';
+    if (hasB) abMarkerB.style.left = `${Math.min(100, (state.abLoopB! / duration) * 100)}%`;
+  }
+
+  btnSetLoopA?.classList.toggle('active', state.abLoopA !== null);
+  btnSetLoopB?.classList.toggle('active', state.abLoopB !== null);
+  btnToggleAbLoop?.classList.toggle('active', state.abLoopEnabled);
+  if (btnToggleAbLoop) {
+    btnToggleAbLoop.disabled = state.abLoopA === null || state.abLoopB === null;
+  }
+  if (btnClearAbLoop) {
+    btnClearAbLoop.disabled = state.abLoopA === null && state.abLoopB === null;
+  }
+}
+
+function clearAbLoop(showMessage = true) {
+  state.abLoopEnabled = false;
+  state.abLoopA = null;
+  state.abLoopB = null;
+  updateAbLoopUI();
+  if (showMessage) showToast('AB loop cleared');
+}
+
+function setAbLoopPoint(point: 'A' | 'B') {
+  if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) {
+    showToast(translations[state.lang].toast_no_tracks);
+    return;
+  }
+
+  const currentTime = Math.max(0, Math.min(audio.currentTime, audio.duration));
+  if (point === 'A') {
+    state.abLoopA = currentTime;
+    if (state.abLoopB !== null && state.abLoopB <= currentTime + 0.25) {
+      state.abLoopB = null;
+      state.abLoopEnabled = false;
+    }
+    showToast(`Loop A: ${fmt(currentTime)}`);
+  } else {
+    if (state.abLoopA === null) {
+      showToast('Set A first');
+      updateAbLoopUI();
+      return;
+    } else if (currentTime <= state.abLoopA + 0.25) {
+      showToast('Set B after A');
+      updateAbLoopUI();
+      return;
+    } else {
+      state.abLoopB = currentTime;
+      state.abLoopEnabled = true;
+      showToast(`Loop B: ${fmt(currentTime)}`);
+    }
+  }
+  updateAbLoopUI();
+}
+
+function toggleAbLoop() {
+  if (state.abLoopA === null || state.abLoopB === null) {
+    showToast('Set A and B first');
+    updateAbLoopUI();
+    return;
+  }
+  state.abLoopEnabled = !state.abLoopEnabled;
+  updateAbLoopUI();
+  showToast(state.abLoopEnabled ? 'AB loop on' : 'AB loop off');
 }
 
 async function toggleMiniMode() {
@@ -521,6 +607,7 @@ function togglePlayWrapper() {
 }
 
 function loadTrackWrapper(index: number, autoplay = false) {
+  if (index !== state.current) clearAbLoop(false);
   player.loadTrack(
     index,
     autoplay,
@@ -639,6 +726,7 @@ function resetPlayer() {
   if (durTime) durTime.textContent = '0:00';
   if (seekFill) seekFill.style.width = '0%';
   if (seekThumb) seekThumb.style.left = '0%';
+  clearAbLoop(false);
   syncMediaSession();
 }
 
@@ -1212,11 +1300,11 @@ function setupLegacyLogic() {
 
   cmPosLeft?.addEventListener('click', () => {
     setPlaylistPosition('left');
-    hideSidebarContextMenu();
+    hideSidebarContextMenu(true);
   });
   cmPosRight?.addEventListener('click', () => {
     setPlaylistPosition('right');
-    hideSidebarContextMenu();
+    hideSidebarContextMenu(true);
   });
 
   playBtn?.addEventListener('click', () => {
@@ -1241,6 +1329,22 @@ function setupLegacyLogic() {
 
   repeatBtn?.addEventListener('click', () => {
     toggleRepeat();
+  });
+
+  btnSetLoopA?.addEventListener('click', () => {
+    setAbLoopPoint('A');
+  });
+
+  btnSetLoopB?.addEventListener('click', () => {
+    setAbLoopPoint('B');
+  });
+
+  btnToggleAbLoop?.addEventListener('click', () => {
+    toggleAbLoop();
+  });
+
+  btnClearAbLoop?.addEventListener('click', () => {
+    clearAbLoop();
   });
 
   speedSlider?.addEventListener('input', (e: Event) => {
@@ -1763,6 +1867,15 @@ function setupLegacyLogic() {
       case 'r':
         repeatBtn?.click();
         break;
+      case '[':
+        setAbLoopPoint('A');
+        break;
+      case ']':
+        setAbLoopPoint('B');
+        break;
+      case '\\':
+        toggleAbLoop();
+        break;
     }
   });
 }
@@ -1904,11 +2017,17 @@ if (rootEl) {
     shuffleBtn = document.getElementById('shuffleBtn') as HTMLButtonElement | null;
     repeatBtn = document.getElementById('repeatBtn') as HTMLButtonElement | null;
     repeatBadge = document.getElementById('repeatBadge') as HTMLSpanElement | null;
+    btnSetLoopA = document.getElementById('btnSetLoopA') as HTMLButtonElement | null;
+    btnSetLoopB = document.getElementById('btnSetLoopB') as HTMLButtonElement | null;
+    btnToggleAbLoop = document.getElementById('btnToggleAbLoop') as HTMLButtonElement | null;
+    btnClearAbLoop = document.getElementById('btnClearAbLoop') as HTMLButtonElement | null;
     muteBtn = document.getElementById('muteBtn') as HTMLButtonElement | null;
     volIcon = document.getElementById('volIcon') as HTMLDivElement | null;
     seeker = document.getElementById('seeker') as HTMLDivElement | null;
     seekFill = document.getElementById('seekFill') as HTMLDivElement | null;
     seekThumb = document.getElementById('seekThumb') as HTMLDivElement | null;
+    abMarkerA = document.getElementById('abMarkerA') as HTMLDivElement | null;
+    abMarkerB = document.getElementById('abMarkerB') as HTMLDivElement | null;
     curTime = document.getElementById('curTime') as HTMLSpanElement | null;
     durTime = document.getElementById('durTime') as HTMLSpanElement | null;
     volBar = document.getElementById('volBar') as HTMLDivElement | null;
@@ -2024,10 +2143,19 @@ if (rootEl) {
         if (curTime) curTime.textContent = '0:00';
         if (seekFill) seekFill.style.width = '0%';
         if (seekThumb) seekThumb.style.left = '0%';
+        updateAbLoopUI();
       });
 
       audio.addEventListener('timeupdate', () => {
         if (audio) {
+          if (
+            state.abLoopEnabled &&
+            state.abLoopA !== null &&
+            state.abLoopB !== null &&
+            audio.currentTime >= state.abLoopB
+          ) {
+            audio.currentTime = state.abLoopA;
+          }
           if (!state.seekDrag) {
             const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
             if (seekFill) seekFill.style.width = pct + '%';
@@ -2055,6 +2183,7 @@ if (rootEl) {
     }
 
     updateVolBarUI();
+    updateAbLoopUI();
     player.buildShuffleOrder();
 
     // Apply saved opacity

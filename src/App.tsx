@@ -564,6 +564,8 @@ const App: React.FC = () => {
             >
               <div className="seeker-buf" id="seekBuf"></div>
               <div className="seeker-fill" id="seekFill"></div>
+              <div className="ab-marker ab-marker-a" id="abMarkerA"></div>
+              <div className="ab-marker ab-marker-b" id="abMarkerB"></div>
               <div className="seeker-thumb" id="seekThumb"></div>
             </div>
             <span className="time-lbl" id="durTime">
@@ -668,6 +670,24 @@ const App: React.FC = () => {
                 1
               </span>
             </button>
+            <div className="ab-loop-controls" aria-label="AB loop controls">
+              <button className="ab-loop-btn" id="btnSetLoopA" title="Set loop start">
+                A
+              </button>
+              <button className="ab-loop-btn" id="btnSetLoopB" title="Set loop end">
+                B
+              </button>
+              <button
+                className="ab-loop-btn ab-loop-toggle"
+                id="btnToggleAbLoop"
+                title="Toggle AB loop"
+              >
+                AB
+              </button>
+              <button className="ab-loop-clear" id="btnClearAbLoop" title="Clear AB loop">
+                x
+              </button>
+            </div>
             <button
               className="ctrl-icon"
               id="btnShowEq"
