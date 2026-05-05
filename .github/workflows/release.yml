@@ -149,20 +149,13 @@ jobs:
           $exe = Get-ChildItem -Path $bundleDir -Recurse -File -Filter "*.exe" |
             Sort-Object LastWriteTime -Descending |
             Select-Object -First 1
-          $msi = Get-ChildItem -Path $bundleDir -Recurse -File -Filter "*.msi" |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
 
           if (-not $exe) {
             throw "No EXE installer artifact found."
           }
-          if (-not $msi) {
-            throw "No MSI installer artifact found."
-          }
 
           $releaseArtifacts = @(
-            @{ Source = $exe.FullName; Name = "Audion_${version}_x64-setup.exe" },
-            @{ Source = $msi.FullName; Name = "Audion_${version}_x64_ja-JP.msi" }
+            @{ Source = $exe.FullName; Name = "Audion_${version}_x64-setup.exe" }
           )
 
           foreach ($item in $releaseArtifacts) {
@@ -201,8 +194,6 @@ jobs:
           files: |
             release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe
             release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe.sha256
-            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64_ja-JP.msi
-            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64_ja-JP.msi.sha256
           fail_on_unmatched_files: true
 
       - name: Dispatch WinGet workflow
