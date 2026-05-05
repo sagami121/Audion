@@ -29,18 +29,14 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     }
   },
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "audion"
-        ]
+        "schemes": ["audion"]
       }
     }
   },
@@ -57,36 +53,16 @@
     ],
     "windows": {
       "wix": {
-        "language": [
-          "en-US",
-          "ja-JP",
-          "ko-KR",
-          "zh-CN"
-        ]
+        "language": ["en-US", "ja-JP", "ko-KR", "zh-CN"]
       },
       "nsis": {
-        "languages": [
-          "English",
-          "Japanese",
-          "Korean",
-          "SimpChinese"
-        ],
+        "languages": ["English", "Japanese", "Korean", "SimpChinese"],
         "displayLanguageSelector": true
       }
     },
     "fileAssociations": [
       {
-        "ext": [
-          "mp3",
-          "wav",
-          "flac",
-          "m4a",
-          "ogg",
-          "aac",
-          "opus",
-          "aiff",
-          "wma"
-        ],
+        "ext": ["mp3", "wav", "flac", "m4a", "ogg", "aac", "opus", "aiff", "wma"],
         "name": "Audio File",
         "description": "Audion Audio File"
       }
