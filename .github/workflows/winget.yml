@@ -1,0 +1,87 @@
+name: Winget
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to submit. Defaults to the latest Changelog.txt entry.
+        required: false
+      package_id:
+        description: WinGet package identifier.
+        required: false
+        default: sagami121.Audion
+
+concurrency:
+  group: winget-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    name: Submit WinGet Update
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read changelog release
+        id: changelog
+        run: node scripts/release-info.mjs
+
+      - name: Resolve release asset
+        id: release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            if ("${{ github.event_name }}" -eq "release") {
+              $version = "${{ github.event.release.tag_name }}".TrimStart("v")
+            } else {
+              $version = "${{ steps.changelog.outputs.version }}"
+            }
+          }
+          $tag = $version
+          $assetJson = gh release view $tag --json assets 2>$null
+          if (-not $assetJson) {
+            $tag = "v$version"
+            $assetJson = gh release view $tag --json assets
+          }
+          $asset = ($assetJson | ConvertFrom-Json).assets |
+            Where-Object { $_.name -like "*.msi" } |
+            Select-Object -First 1
+          if (-not $asset) {
+            throw "No MSI asset found in release $tag."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "installer_url=$($asset.url)" >> $env:GITHUB_OUTPUT
+
+      - name: Download wingetcreate
+        shell: pwsh
+        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Submit WinGet PR
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_TOKEN)) {
+            throw "Missing WINGET_TOKEN secret."
+          }
+          $packageId = "${{ github.event.inputs.package_id }}"
+          if ([string]::IsNullOrWhiteSpace($packageId)) {
+            $packageId = "sagami121.Audion"
+          }
+          .\wingetcreate.exe update $packageId `
+            -v ${{ steps.release.outputs.version }} `
+            -u "${{ steps.release.outputs.installer_url }}" `
+            -t $env:WINGET_TOKEN `
+            --submit
