@@ -1,5 +1,8 @@
 import fs from 'fs';
 import { execFileSync } from 'child_process';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const newVersion = process.argv[2];
 if (!newVersion) {
@@ -9,10 +12,14 @@ if (!newVersion) {
 }
 
 function formatVersionFiles() {
-  const prettierBin = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  execFileSync(prettierBin, ['prettier', '--write', 'package.json', 'src-tauri/tauri.conf.json'], {
-    stdio: 'inherit'
-  });
+  const prettierBin = require.resolve('prettier/bin/prettier.cjs');
+  execFileSync(
+    process.execPath,
+    [prettierBin, '--write', 'package.json', 'src-tauri/tauri.conf.json'],
+    {
+      stdio: 'inherit'
+    }
+  );
 }
 
 // package.json

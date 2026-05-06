@@ -19,10 +19,12 @@ permissions:
   contents: write
 
 jobs:
-  prerelease:
-    name: Build and Publish Prerelease
+  detect:
+    name: Detect Prerelease
     runs-on: windows-latest
-    timeout-minutes: 60
+    outputs:
+      should_release: ${{ steps.release_gate.outputs.should_release }}
+      prerelease: ${{ steps.release_info.outputs.prerelease }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,44 +46,51 @@ jobs:
           }
           "should_release=$shouldRelease" >> $env:GITHUB_OUTPUT
 
-      - name: Stop when prerelease is not needed
-        if: steps.release_gate.outputs.should_release != 'true'
-        run: echo "Skipping prerelease because this run was not triggered by a Changelog.txt release change."
+      - name: Read changelog release
+        if: steps.release_gate.outputs.should_release == 'true'
+        id: release_info
+        run: node scripts/release-info.mjs
+
+      - name: Report stable skip
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
+        run: echo "Skipping prerelease build because Changelog.txt points to a stable version."
+
+  prerelease:
+    name: Build and Publish Prerelease
+    needs: detect
+    if: needs.detect.outputs.should_release == 'true' && needs.detect.outputs.prerelease == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
-        if: steps.release_gate.outputs.should_release == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Setup Rust
-        if: steps.release_gate.outputs.should_release == 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
       - name: Cache Cargo
-        if: steps.release_gate.outputs.should_release == 'true'
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
 
       - name: Install frontend dependencies
-        if: steps.release_gate.outputs.should_release == 'true'
         run: npm ci
 
       - name: Read changelog release
-        if: steps.release_gate.outputs.should_release == 'true'
         id: release_info
         run: node scripts/release-info.mjs --out release-notes.md
 
-      - name: Stop when release is stable
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
-        run: echo "Skipping prerelease because Changelog.txt points to a stable version."
-
       - name: Validate changelog version
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         shell: pwsh
         run: |
           $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
@@ -102,7 +111,6 @@ jobs:
           }
 
       - name: Check existing tag
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         id: tag_state
         shell: pwsh
         run: |
@@ -115,35 +123,27 @@ jobs:
           "tag_exists=$tagExists" >> $env:GITHUB_OUTPUT
 
       - name: Bump project version
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: npm run bump ${{ steps.release_info.outputs.version }}
 
       - name: Format version files
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: npx prettier --write package.json package-lock.json src-tauri/tauri.conf.json
 
       - name: Update Cargo.lock
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: cargo check --manifest-path src-tauri/Cargo.toml
 
       - name: Check formatting
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: npm run format:check
 
       - name: Lint frontend
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: npm run lint
 
       - name: Build frontend
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: npm run build
 
       - name: Build Tauri app
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         run: npm run tauri build
 
       - name: Prepare prerelease assets
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         shell: pwsh
         run: |
           $version = "${{ steps.release_info.outputs.version }}"
@@ -172,7 +172,6 @@ jobs:
           }
 
       - name: Commit version bump and tag
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
@@ -190,7 +189,6 @@ jobs:
           }
 
       - name: Publish GitHub Prerelease
-        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
