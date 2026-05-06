@@ -23,6 +23,7 @@ permissions:
 jobs:
   submit:
     name: Submit WinGet Update
+    if: github.event_name != 'release' || github.event.release.prerelease != true
     runs-on: windows-latest
     timeout-minutes: 20
     env:
@@ -63,10 +64,10 @@ jobs:
             $assetJson = gh release view $tag --json assets
           }
           $asset = ($assetJson | ConvertFrom-Json).assets |
-            Where-Object { $_.name -like "*.msi" } |
+            Where-Object { $_.name -like "*.exe" } |
             Select-Object -First 1
           if (-not $asset) {
-            throw "No MSI asset found in release $tag."
+            throw "No EXE asset found in release $tag."
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
