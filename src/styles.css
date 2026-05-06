@@ -87,6 +87,10 @@ body {
     color var(--transition);
 }
 
+body.i18n-pending #root {
+  opacity: 0;
+}
+
 .titlebar {
   position: fixed;
   top: 0;
@@ -217,7 +221,7 @@ body {
 
 .modal-card.settings-card,
 .modal-card.bug-card {
-  max-width: 620px;
+  max-width: 720px;
   display: flex;
   flex-direction: column;
 }
@@ -229,7 +233,9 @@ body {
 }
 
 .bug-sidebar {
-  width: 140px;
+  width: 190px;
+  flex: 0 0 190px;
+  min-width: 0;
   border-right: 1px solid var(--border);
   padding: 10px 0;
   display: flex;
@@ -251,6 +257,14 @@ body {
   opacity: 0.6;
   transition: all 0.2s;
   text-align: left;
+  min-width: 0;
+}
+
+.bug-nav-btn span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bug-nav-btn:hover {
@@ -267,6 +281,7 @@ body {
 
 .bug-content {
   flex: 1;
+  min-width: 0;
   padding: 20px;
   overflow-y: auto;
 }

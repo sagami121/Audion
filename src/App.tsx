@@ -138,7 +138,7 @@ const App: React.FC = () => {
               <button className="pl-view-btn" data-view="recent" data-i18n="view_recent">
                 最近追加
               </button>
-              <button className="pl-view-btn" data-view="popular" data-i18n="popular">
+              <button className="pl-view-btn" data-view="popular" data-i18n="view_popular">
                 人気順
               </button>
               <button className="pl-view-btn" data-view="favorites" data-i18n="favorites">

@@ -369,6 +369,15 @@ function showBugError(msg: string) {
   bugError.hidden = false;
 }
 
+function syncBugValidationState() {
+  const hasTitle = !!bugTitle?.value.trim();
+  const hasDesc = !!bugDesc?.value.trim();
+
+  if (hasTitle) bugTitle?.classList.remove('input-error');
+  if (hasDesc) bugDesc?.classList.remove('input-error');
+  if (hasTitle && hasDesc) clearBugError();
+}
+
 function setTheme(theme: string) {
   state.theme = theme as 'dark' | 'light';
   document.body.classList.remove('dark-theme', 'light-theme');
@@ -420,6 +429,7 @@ function updateLanguage(lang: string) {
   saveSettings();
   updateCount();
   populatePresetSelect();
+  document.body.classList.remove('i18n-pending');
 }
 
 function setSpeed(val: number) {
@@ -1236,14 +1246,8 @@ function setupLegacyLogic() {
     }
   });
 
-  bugTitle?.addEventListener('input', () => {
-    if (bugTitle && bugTitle.value.trim()) bugTitle.classList.remove('input-error');
-    if (bugTitle && bugTitle.value.trim() && bugDesc && bugDesc.value.trim()) clearBugError();
-  });
-  bugDesc?.addEventListener('input', () => {
-    if (bugDesc && bugDesc.value.trim()) bugDesc.classList.remove('input-error');
-    if (bugTitle && bugTitle.value.trim() && bugDesc && bugDesc.value.trim()) clearBugError();
-  });
+  bugTitle?.addEventListener('input', syncBugValidationState);
+  bugDesc?.addEventListener('input', syncBugValidationState);
 
   btnThemeDark?.addEventListener('click', () => {
     btnThemeDark?.classList.add('active');
@@ -2010,17 +2014,6 @@ if (rootEl) {
 // Legacy initialization logic
 (async () => {
   console.log('Initialization started...');
-  if (isTauri) {
-    try {
-      const win = getCurrentWebviewWindow();
-      await win.show();
-      windowShown = true;
-      console.log('Window shown.');
-    } catch (e) {
-      console.error('Failed to show window at start:', e);
-    }
-  }
-
   try {
     // Wait for React to render elements
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -2208,8 +2201,11 @@ if (rootEl) {
     player.buildShuffleOrder();
 
     // Apply saved opacity
+    updateLanguage(state.lang);
     setUiOpacity(uiOpacityValue);
     setUpdateChannel(state.updateChannel);
+
+    if (isTauri) await showApp();
 
     // Init custom dropdowns
     initCustomSelects();
@@ -2311,6 +2307,7 @@ if (rootEl) {
   } catch (e) {
     console.error('Init Error:', e);
   } finally {
+    document.body.classList.remove('i18n-pending');
     if (isTauri) showApp();
   }
 })();
