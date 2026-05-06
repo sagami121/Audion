@@ -77,14 +77,20 @@ jobs:
         id: release_info
         run: node scripts/release-info.mjs --out release-notes.md
 
+      - name: Stop when release is a prerelease
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: echo "Skipping stable release because Changelog.txt points to a prerelease version."
+
       - name: Validate changelog version
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         shell: pwsh
         run: |
           $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
           $releaseVersion = "${{ steps.release_info.outputs.version }}"
-          $packageParts = $packageVersion.Split(".") | ForEach-Object { [int]$_ }
-          $releaseParts = $releaseVersion.Split(".") | ForEach-Object { [int]$_ }
+          $packageCore = ($packageVersion -split "[-+]")[0]
+          $releaseCore = ($releaseVersion -split "[-+]")[0]
+          $packageParts = $packageCore.Split(".") | ForEach-Object { [int]$_ }
+          $releaseParts = $releaseCore.Split(".") | ForEach-Object { [int]$_ }
           for ($i = 0; $i -lt [Math]::Max($packageParts.Count, $releaseParts.Count); $i++) {
             $packagePart = if ($i -lt $packageParts.Count) { $packageParts[$i] } else { 0 }
             $releasePart = if ($i -lt $releaseParts.Count) { $releaseParts[$i] } else { 0 }
@@ -97,7 +103,7 @@ jobs:
           }
 
       - name: Check existing tag
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         id: tag_state
         shell: pwsh
         run: |
@@ -110,35 +116,35 @@ jobs:
           "tag_exists=$tagExists" >> $env:GITHUB_OUTPUT
 
       - name: Bump project version
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: npm run bump ${{ steps.release_info.outputs.version }}
 
       - name: Format version files
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: npx prettier --write package.json package-lock.json src-tauri/tauri.conf.json
 
       - name: Update Cargo.lock
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: cargo check --manifest-path src-tauri/Cargo.toml
 
       - name: Check formatting
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: npm run format:check
 
       - name: Lint frontend
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: npm run lint
 
       - name: Build frontend
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: npm run build
 
       - name: Build Tauri app
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         run: npm run tauri build
 
       - name: Prepare release assets
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         shell: pwsh
         run: |
           $version = "${{ steps.release_info.outputs.version }}"
@@ -167,7 +173,7 @@ jobs:
           }
 
       - name: Commit version bump and tag
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
@@ -185,19 +191,20 @@ jobs:
           }
 
       - name: Publish GitHub Release
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
           name: ${{ steps.release_info.outputs.version }}
           body_path: release-notes.md
+          prerelease: false
           files: |
             release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe
             release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe.sha256
           fail_on_unmatched_files: true
 
       - name: Dispatch WinGet workflow
-        if: steps.release_gate.outputs.should_release == 'true'
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
