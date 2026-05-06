@@ -7,6 +7,7 @@ use std::fs;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
+#[cfg(not(windows))]
 use tauri_plugin_opener::OpenerExt;
 
 mod discord_rpc;
@@ -337,7 +338,9 @@ struct ReleaseAsset {
 
 #[derive(Deserialize)]
 struct GitHubRelease {
+    tag_name: String,
     body: Option<String>,
+    prerelease: bool,
     assets: Vec<GitHubReleaseAsset>,
 }
 
@@ -449,7 +452,19 @@ fn get_version(app: AppHandle) -> String {
 }
 
 #[tauri::command]
-fn fetch_latest_release_info() -> Result<ReleaseInfo, String> {
+async fn fetch_latest_release_info(channel: Option<String>) -> Result<ReleaseInfo, String> {
+    tauri::async_runtime::spawn_blocking(move || fetch_latest_release_info_blocking(channel))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn fetch_latest_release_info_blocking(channel: Option<String>) -> Result<ReleaseInfo, String> {
+    if channel.as_deref() == Some("beta") {
+        if let Ok(release) = fetch_beta_release_info_blocking() {
+            return Ok(release);
+        }
+    }
+
     let latest_url = "https://github.com/sagami121/Audion/releases/latest";
     let client = reqwest::blocking::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
@@ -481,23 +496,48 @@ fn fetch_latest_release_info() -> Result<ReleaseInfo, String> {
     let assets = if let Some(release) = github_release {
         build_release_assets(&client, &release.assets)?
     } else {
-        vec![
-            ReleaseAsset {
-                name: format!("Audion_{}_x64_ja-JP.msi", version),
-                browser_download_url: format!("https://github.com/sagami121/Audion/releases/download/{}/Audion_{}_x64_ja-JP.msi", tag, version),
-                sha256: None,
-            },
-            ReleaseAsset {
-                name: format!("Audion_v{}_x64_ja-JP.msi", version),
-                browser_download_url: format!("https://github.com/sagami121/Audion/releases/download/{}/Audion_v{}_x64_ja-JP.msi", tag, version),
-                sha256: None,
-            },
-        ]
+        vec![ReleaseAsset {
+            name: format!("Audion_{}_x64-setup.exe", version),
+            browser_download_url: format!(
+                "https://github.com/sagami121/Audion/releases/download/{}/Audion_{}_x64-setup.exe",
+                tag, version
+            ),
+            sha256: None,
+        }]
     };
 
     Ok(ReleaseInfo {
         tag_name: tag,
         body,
+        assets,
+    })
+}
+
+fn fetch_beta_release_info_blocking() -> Result<ReleaseInfo, String> {
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Audion-Updater")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let response = client
+        .get("https://api.github.com/repos/sagami121/Audion/releases?per_page=20")
+        .send()
+        .map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub API {}", response.status()));
+    }
+
+    let release = response
+        .json::<Vec<GitHubRelease>>()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|release| release.prerelease)
+        .ok_or_else(|| "Beta release not found".to_string())?;
+
+    let assets = build_release_assets(&client, &release.assets)?;
+    Ok(ReleaseInfo {
+        tag_name: release.tag_name,
+        body: release.body.unwrap_or_default(),
         assets,
     })
 }
@@ -537,7 +577,7 @@ fn build_release_assets(
 
 fn is_installer_asset(name: &str) -> bool {
     let lower = name.to_lowercase();
-    lower.ends_with(".msi") || lower.ends_with(".exe")
+    lower.ends_with(".exe")
 }
 
 fn is_checksum_asset(name: &str) -> bool {
@@ -703,7 +743,19 @@ fn html_to_text(input: &str) -> String {
 }
 
 #[tauri::command]
-fn download_installer(
+async fn download_installer(
+    asset_url: String,
+    file_name: String,
+    expected_sha256: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        download_installer_blocking(asset_url, file_name, expected_sha256)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+fn download_installer_blocking(
     asset_url: String,
     file_name: String,
     expected_sha256: String,
@@ -752,21 +804,28 @@ fn calculate_sha256(bytes: &[u8]) -> String {
     format!("{:x}", digest)
 }
 
+#[cfg(windows)]
+fn powershell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
 #[tauri::command]
 fn run_installer(app: AppHandle, path: String) -> Result<(), String> {
     #[cfg(windows)]
     {
-        if path.ends_with(".msi") {
-            let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
-            let current_exe_str = current_exe.to_string_lossy();
+        let _ = app;
+        let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let current_exe_str = current_exe.to_string_lossy();
 
-            // Run msiexec, wait for it to finish, and then relaunch the application
+        if path.ends_with(".exe") {
             let script = format!(
-                "Start-Process msiexec.exe -ArgumentList '/i', '{}', '/passive' -Wait; Start-Process '{}'",
-                path, current_exe_str
+                "Start-Process -FilePath {} -ArgumentList '/S' -WindowStyle Hidden -Wait; Start-Process -FilePath {}",
+                powershell_quote(&path),
+                powershell_quote(&current_exe_str),
             );
 
             std::process::Command::new("powershell")
+                .arg("-NoProfile")
                 .arg("-WindowStyle")
                 .arg("Hidden")
                 .arg("-Command")
@@ -775,13 +834,17 @@ fn run_installer(app: AppHandle, path: String) -> Result<(), String> {
                 .map_err(|e: std::io::Error| e.to_string())?;
             return Ok(());
         }
+
+        return Err("Unsupported installer type. Expected EXE.".to_string());
     }
 
-    // Open file with system default app when not handling MSI flow.
+    #[cfg(not(windows))]
+    // Open file with system default app on non-Windows platforms.
     app.opener()
         .open_path(&path, None::<&str>)
         .map_err(|e| e.to_string())?;
 
+    #[cfg(not(windows))]
     Ok(())
 }
 
