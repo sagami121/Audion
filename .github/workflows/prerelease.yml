@@ -1,0 +1,203 @@
+name: Prerelease
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Changelog.txt
+  workflow_run:
+    workflows: [Check]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: prerelease
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    name: Build and Publish Prerelease
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide prerelease trigger
+        id: release_gate
+        shell: pwsh
+        run: |
+          $shouldRelease = "false"
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -or "${{ github.event_name }}" -eq "push") {
+            $shouldRelease = "true"
+          } elseif ("${{ github.event_name }}" -eq "workflow_run" -and "${{ github.event.workflow_run.conclusion }}" -eq "success") {
+            $changedFiles = git diff-tree --no-commit-id --name-only -r "${{ github.event.workflow_run.head_sha }}"
+            if ($changedFiles -contains "Changelog.txt") {
+              $shouldRelease = "true"
+            }
+          }
+          "should_release=$shouldRelease" >> $env:GITHUB_OUTPUT
+
+      - name: Stop when prerelease is not needed
+        if: steps.release_gate.outputs.should_release != 'true'
+        run: echo "Skipping prerelease because this run was not triggered by a Changelog.txt release change."
+
+      - name: Setup Node.js
+        if: steps.release_gate.outputs.should_release == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        if: steps.release_gate.outputs.should_release == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Cache Cargo
+        if: steps.release_gate.outputs.should_release == 'true'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        if: steps.release_gate.outputs.should_release == 'true'
+        run: npm ci
+
+      - name: Read changelog release
+        if: steps.release_gate.outputs.should_release == 'true'
+        id: release_info
+        run: node scripts/release-info.mjs --out release-notes.md
+
+      - name: Stop when release is stable
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease != 'true'
+        run: echo "Skipping prerelease because Changelog.txt points to a stable version."
+
+      - name: Validate changelog version
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
+          $releaseVersion = "${{ steps.release_info.outputs.version }}"
+          $packageCore = ($packageVersion -split "[-+]")[0]
+          $releaseCore = ($releaseVersion -split "[-+]")[0]
+          $packageParts = $packageCore.Split(".") | ForEach-Object { [int]$_ }
+          $releaseParts = $releaseCore.Split(".") | ForEach-Object { [int]$_ }
+          for ($i = 0; $i -lt [Math]::Max($packageParts.Count, $releaseParts.Count); $i++) {
+            $packagePart = if ($i -lt $packageParts.Count) { $packageParts[$i] } else { 0 }
+            $releasePart = if ($i -lt $releaseParts.Count) { $releaseParts[$i] } else { 0 }
+            if ($releasePart -lt $packagePart) {
+              throw "Latest Changelog.txt version ($releaseVersion) is older than package.json version ($packageVersion). Add a new Changelog.txt entry before prereleasing."
+            }
+            if ($releasePart -gt $packagePart) {
+              break
+            }
+          }
+
+      - name: Check existing tag
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        id: tag_state
+        shell: pwsh
+        run: |
+          $tagExists = "false"
+          $remoteTag = git ls-remote --tags origin "refs/tags/${{ steps.release_info.outputs.tag }}"
+          if (-not [string]::IsNullOrWhiteSpace($remoteTag)) {
+            $tagExists = "true"
+            Write-Host "Tag ${{ steps.release_info.outputs.tag }} already exists. Reusing it for this prerelease run."
+          }
+          "tag_exists=$tagExists" >> $env:GITHUB_OUTPUT
+
+      - name: Bump project version
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: npm run bump ${{ steps.release_info.outputs.version }}
+
+      - name: Format version files
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: npx prettier --write package.json package-lock.json src-tauri/tauri.conf.json
+
+      - name: Update Cargo.lock
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+      - name: Check formatting
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: npm run format:check
+
+      - name: Lint frontend
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: npm run lint
+
+      - name: Build frontend
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: npm run build
+
+      - name: Build Tauri app
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        run: npm run tauri build
+
+      - name: Prepare prerelease assets
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.release_info.outputs.version }}"
+          $assetDir = "release-assets"
+          New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
+
+          $bundleDir = "src-tauri/target/release/bundle"
+          $exe = Get-ChildItem -Path $bundleDir -Recurse -File -Filter "*.exe" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            throw "No EXE installer artifact found."
+          }
+
+          $releaseArtifacts = @(
+            @{ Source = $exe.FullName; Name = "Audion_${version}_x64-setup.exe" }
+          )
+
+          foreach ($item in $releaseArtifacts) {
+            $target = Join-Path $assetDir $item.Name
+            Copy-Item $item.Source $target -Force
+            $artifact = Get-Item $target
+            $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($artifact.Name)" | Set-Content "$($artifact.FullName).sha256" -Encoding ascii
+          }
+
+      - name: Commit version bump and tag
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "chore: prerelease ${{ steps.release_info.outputs.tag }}"
+          }
+          if ("${{ steps.tag_state.outputs.tag_exists }}" -ne "true") {
+            git tag ${{ steps.release_info.outputs.tag }}
+          }
+          git push origin HEAD:main
+          if ("${{ steps.tag_state.outputs.tag_exists }}" -ne "true") {
+            git push origin ${{ steps.release_info.outputs.tag }}
+          }
+
+      - name: Publish GitHub Prerelease
+        if: steps.release_gate.outputs.should_release == 'true' && steps.release_info.outputs.prerelease == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          name: ${{ steps.release_info.outputs.version }}
+          body_path: release-notes.md
+          prerelease: true
+          files: |
+            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe
+            release-assets/Audion_${{ steps.release_info.outputs.version }}_x64-setup.exe.sha256
+          fail_on_unmatched_files: true
