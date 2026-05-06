@@ -3,7 +3,7 @@
 <div align="center">
   <img src="img/app_icon.jpg" width="128" height="128" alt="Audion Icon">
   <br>
-  <p><strong>Tauri Base Music Player</strong></p>
+  <p><strong>Tauri-based Music Player</strong></p>
 
 ![Version](https://img.shields.io/github/v/release/sagami121/Audion?style=for-the-badge&color=blue&label=version)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D4?style=for-the-badge&logo=windows)
@@ -16,11 +16,13 @@
 
 </div>
 
-## Audionについて
+[日本語版のREADMEはこちら](README_ja.md)
 
-Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイヤーです。
+## About Audion
 
-- 対応フォーマット:
+Audion is a lightweight music player for Windows built with Tauri v2 and React.
+
+- Supported formats
   <p>
     <img src="https://img.shields.io/badge/MP3-444?style=flat-square">
     <img src="https://img.shields.io/badge/WAV-444?style=flat-square">
@@ -30,14 +32,28 @@ Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイ
     <img src="https://img.shields.io/badge/OPUS-444?style=flat-square">
     <img src="https://img.shields.io/badge/AIFF-444?style=flat-square">
   </p>
-- インストーラー配布: `.msi`, `.exe`
-- ライセンス: [MIT License](LICENSE)
+- Installer distribution: `.exe`
+- License: [MIT License](LICENSE)
+
+## Features
+
+- Add songs from individual files or entire folders
+- Drag and drop music files directly into the playlist
+- Search by title or artist
+- Switch playlist views between all tracks, recently added tracks, popular tracks, and favorites
+- Save and load playlists
+- Adjust playback speed, shuffle, repeat, and volume
+- Show lyrics when available
+- Use audio effects such as equalizer, compressor, reverb, and delay
+- Customize the theme, language, UI opacity, and playlist position
+- Check for updates from the app
+- Show the currently playing track on Discord
 
 ## Deep Link
 
-### AudionはDeep Linkに対応しています。
+### Audion supports deep links.
 
-### 対応リンク
+### Supported Links
 
 - `audion://home`
 - `audion://settings`
@@ -47,57 +63,57 @@ Audionは、Tauri v2 + Reactで作られたWindows向けの軽量音楽プレイ
 - `audion://settings/version`
 - `audion://report`
 
-## スクリーンショット
+## Screenshots
 
 <div align="center">
-  <h3>メイン画面</h3>
-  <img src="docs/1.png" width="800" alt="メイン画面" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>Main Screen</h3>
+  <img src="docs/en/1.png" width="800" alt="Main Screen" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
   <br>
 
-  <h3>設定画面</h3>
-  <img src="docs/2.png" width="400" alt="設定画面" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>Settings Screen</h3>
+  <img src="docs/en/2.png" width="400" alt="Settings Screen" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
   <br>
 
-  <h3>フィードバック画面</h3>
-  <img src="docs/3.png" width="400" alt="フィードバック画面" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>Feedback Screen</h3>
+  <img src="docs/en/3.png" width="400" alt="Feedback Screen" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 
-  <h3>イコライザー</h3>
-  <img src="docs/4.png" width="400" alt="イコライザー" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>Equalizer</h3>
+  <img src="docs/en/4.png" width="400" alt="Equalizer" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 
-  <h3>コンプレッサー</h3>
-  <img src="docs/5.png" width="400" alt="コンプレッサー" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>Compressor</h3>
+  <img src="docs/en/5.png" width="400" alt="Compressor" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 
-  <h3>リバーブ・ディレイ</h3>
-  <img src="docs/6.png" width="400" alt="リバーブ・ディレイ" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>Reverb and Delay</h3>
+  <img src="docs/en/6.png" width="400" alt="Reverb and Delay" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 
-  <h3>アプリの更新通知</h3>
-  <img src="docs/7.png" width="400" alt="アプリの更新通知" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
+  <h3>App Update Notification</h3>
+  <img src="docs/en/7.png" width="400" alt="App Update Notification" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;">
 </div>
 
 ---
 
-## セットアップ
+## Setup
 
-1. [Rust](https://www.rust-lang.org/ja/tools/install) をインストール
-2. [Node.js](https://nodejs.org/) をインストール
-3. このリポジトリをクローン
+1. Install [Rust](https://www.rust-lang.org/tools/install)
+2. Install [Node.js](https://nodejs.org/)
+3. Clone this repository
 
-### 開発・ビルド
+### Development and Build
 
 ```bash
-# 依存関係をインストール
+# Install dependencies
 npm install
 
-# 開発モードで起動
+# Run in development mode
 npm run tauri dev
 
-# 本番ビルド (.msi) を作成
+# Create a production build (.exe)
 npm run tauri build
 ```
 
 ---
 
-## リリース
+## Release
 
-- 最新版: [GitHub Releases](https://github.com/sagami121/Audion/releases)
-- 変更履歴: [Changelog.txt](Changelog.txt)
+- Latest version: [GitHub Releases](https://github.com/sagami121/Audion/releases)
+- Changelog: [Changelog.txt](Changelog.txt)
