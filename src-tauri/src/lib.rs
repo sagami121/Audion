@@ -7,6 +7,7 @@ use std::fs;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 #[cfg(not(windows))]
 use tauri_plugin_opener::OpenerExt;
 
@@ -898,36 +899,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_shortcuts([
-                    "MediaPlayPause",
-                    "MediaTrackNext",
-                    "MediaTrackPrevious",
-                    "MediaStop",
-                ])
-                .expect("failed to register media shortcuts")
-                .with_handler(|app, shortcut, event| {
-                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                        match shortcut.to_string().to_lowercase().as_str() {
-                            "mediaplaypause" | "mediaplay" | "mediapause" => {
-                                let _ = app.emit("tray-play-pause", ());
-                            }
-                            "mediatracknext" | "medianexttrack" => {
-                                let _ = app.emit("tray-next", ());
-                            }
-                            "mediatrackprevious" | "mediaprevtrack" => {
-                                let _ = app.emit("tray-prev", ());
-                            }
-                            "mediastop" => {
-                                let _ = app.emit("tray-stop", ());
-                            }
-                            _ => {}
-                        }
-                    }
-                })
-                .build(),
-        )
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
@@ -1028,6 +1000,43 @@ pub fn run() {
             {
                 if let Err(e) = windows_taskbar::setup(&app.handle().clone()) {
                     eprintln!("Failed to setup Windows taskbar thumbnail controls: {}", e);
+                }
+
+                for shortcut_name in [
+                    "MediaPlayPause",
+                    "MediaTrackNext",
+                    "MediaTrackPrevious",
+                    "MediaStop",
+                ] {
+                    if let Err(e) =
+                        app.global_shortcut()
+                            .on_shortcut(shortcut_name, |app, shortcut, event| {
+                                if event.state()
+                                    == tauri_plugin_global_shortcut::ShortcutState::Pressed
+                                {
+                                    match shortcut.to_string().to_lowercase().as_str() {
+                                        "mediaplaypause" | "mediaplay" | "mediapause" => {
+                                            let _ = app.emit("tray-play-pause", ());
+                                        }
+                                        "mediatracknext" | "medianexttrack" => {
+                                            let _ = app.emit("tray-next", ());
+                                        }
+                                        "mediatrackprevious" | "mediaprevtrack" => {
+                                            let _ = app.emit("tray-prev", ());
+                                        }
+                                        "mediastop" => {
+                                            let _ = app.emit("tray-stop", ());
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            })
+                    {
+                        eprintln!(
+                            "Failed to register global shortcut {}: {}",
+                            shortcut_name, e
+                        );
+                    }
                 }
             }
 

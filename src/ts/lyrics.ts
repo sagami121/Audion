@@ -2,27 +2,69 @@ import { state } from './state';
 import { translations } from './translations';
 import { invoke } from '@tauri-apps/api/core';
 
+let lyricsLoadId = 0;
+
+function parseTime(minutes: string, seconds: string): number {
+  return parseInt(minutes, 10) * 60 + parseFloat(seconds);
+}
+
 export async function loadLyrics(path: string, lyricsInner: HTMLDivElement | null): Promise<void> {
+  const loadId = ++lyricsLoadId;
   state.lyrics = [];
   state.currentLyricIndex = -1;
-  if (lyricsInner) lyricsInner.innerHTML = '';
+  if (lyricsInner) {
+    lyricsInner.innerHTML = '';
+    lyricsInner.style.transform = '';
+  }
 
   try {
     const lrc: string = await invoke('get_lyrics', { path });
+    if (loadId !== lyricsLoadId) return;
+
     const lines = lrc.split('\n');
-    const timeReg = /\[(\d+):(\d+\.\d+)\]/;
+    const timeReg = /\[(\d+):(\d+(?:\.\d+)?)\]/g;
 
     state.lyrics = lines
-      .map((line) => {
-        const match = timeReg.exec(line);
-        if (match) {
-          const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
-          const text = line.replace(timeReg, '').trim();
-          return { time, text };
-        }
-        return null;
+      .flatMap((line, lineIndex) => {
+        const matches = [...line.matchAll(timeReg)];
+        if (!matches.length) return [];
+
+        const entries: { time: number; text: string; lineIndex: number; tagIndex: number }[] = [];
+        const pendingTimes: { time: number; tagIndex: number }[] = [];
+
+        matches.forEach((match, tagIndex) => {
+          const matchIndex = match.index ?? 0;
+          const nextMatchIndex = matches[tagIndex + 1]?.index ?? line.length;
+          const textStart = matchIndex + match[0].length;
+          const text = line.slice(textStart, nextMatchIndex).trim();
+
+          pendingTimes.push({
+            time: parseTime(match[1], match[2]),
+            tagIndex
+          });
+
+          if (!text) return;
+
+          pendingTimes.splice(0).forEach((pending) => {
+            entries.push({
+              time: pending.time,
+              text,
+              lineIndex,
+              tagIndex: pending.tagIndex
+            });
+          });
+        });
+
+        return entries;
       })
-      .filter((l: any): l is { time: number; text: string } => !!(l && l.text));
+      .sort((a, b) => {
+        if (a.time === b.time) {
+          if (a.lineIndex === b.lineIndex) return a.tagIndex - b.tagIndex;
+          return a.lineIndex - b.lineIndex;
+        }
+        return a.time - b.time;
+      })
+      .map(({ time, text }) => ({ time, text }));
 
     state.lyrics.forEach((l, i) => {
       const div = document.createElement('div');
@@ -32,6 +74,8 @@ export async function loadLyrics(path: string, lyricsInner: HTMLDivElement | nul
       lyricsInner?.appendChild(div);
     });
   } catch (e) {
+    if (loadId !== lyricsLoadId) return;
+
     const dict = translations[state.lang] || translations.ja;
     if (lyricsInner)
       lyricsInner.innerHTML = `<div class="lyric-line" style="opacity:0.5">${dict.no_lyrics}</div>`;
