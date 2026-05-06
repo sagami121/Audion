@@ -152,7 +152,9 @@ export const translations: Translations = {
     discord_rpc: '再生中の曲を Discord に表示する',
     pl_pos: '再生リストの位置',
     pl_left: '左',
-    pl_right: '右'
+    pl_right: '右',
+    update_channel: '更新チャンネル',
+    update_channel_hint: 'Beta はプレリリース版を優先して確認します。'
   },
   en: {
     app_title: 'Audion — Music Player',
@@ -298,7 +300,9 @@ export const translations: Translations = {
     discord_rpc: 'Show playback on Discord',
     pl_pos: 'Playlist Position',
     pl_left: 'Left',
-    pl_right: 'Right'
+    pl_right: 'Right',
+    update_channel: 'Update Channel',
+    update_channel_hint: 'Beta checks prerelease builds first.'
   },
   ko: {
     app_title: 'Audion — 음악 플레이어',
@@ -445,7 +449,9 @@ export const translations: Translations = {
     discord_rpc: 'Discord에 현재 곡 표시',
     pl_pos: '재생 목록 위치',
     pl_left: '왼쪽',
-    pl_right: '오른쪽'
+    pl_right: '오른쪽',
+    update_channel: '업데이트 채널',
+    update_channel_hint: 'Beta는 프리릴리스 빌드를 먼저 확인합니다.'
   },
 
   zh: {
@@ -592,6 +598,8 @@ export const translations: Translations = {
     discord_rpc: '在 Discord 上显示当前歌曲',
     pl_pos: '播放列表位置',
     pl_left: '左',
-    pl_right: '右'
+    pl_right: '右',
+    update_channel: '更新通道',
+    update_channel_hint: 'Beta 会优先检查预发布版本。'
   }
 };

@@ -49,10 +49,14 @@ function setupModalEvents(): void {
 
 async function checkUpdate(manual = false): Promise<void> {
   const dict = translations[state.lang] || translations.ja;
-  if (manual) showToast(dict.toast_update_checking || 'Checking for updates...');
+  const channel = state.updateChannel || 'stable';
+  if (manual) {
+    const channelLabel = channel === 'beta' ? 'Beta' : 'Stable';
+    showToast(`${dict.toast_update_checking || 'Checking for updates...'} (${channelLabel})`);
+  }
 
   try {
-    const release = await fetchLatestRelease();
+    const release = await fetchLatestRelease(channel);
     const latestVersion = normalizeVersion(release.tag_name);
     const currentVersion = normalizeVersion(state.version);
 
@@ -69,12 +73,12 @@ async function checkUpdate(manual = false): Promise<void> {
   }
 }
 
-async function fetchLatestRelease(): Promise<ReleaseInfo> {
+async function fetchLatestRelease(channel: 'stable' | 'beta'): Promise<ReleaseInfo> {
   if (!invoke) {
     throw new Error('Tauri invoke unavailable');
   }
 
-  return invoke('fetch_latest_release_info');
+  return invoke('fetch_latest_release_info', { channel });
 }
 
 function normalizeVersion(version: string): string {
@@ -84,8 +88,8 @@ function normalizeVersion(version: string): string {
 }
 
 function isNewerVersion(current: string, latest: string): boolean {
-  const currentParts = current.split('.').map(Number);
-  const latestParts = latest.split('.').map(Number);
+  const currentParts = parseVersionParts(current);
+  const latestParts = parseVersionParts(latest);
 
   for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i += 1) {
     const currentValue = currentParts[i] || 0;
@@ -95,6 +99,10 @@ function isNewerVersion(current: string, latest: string): boolean {
   }
 
   return false;
+}
+
+function parseVersionParts(version: string): number[] {
+  return (version.match(/\d+/g) || []).map(Number);
 }
 
 function showUpdateToast(releaseInfo: ReleaseInfo): void {

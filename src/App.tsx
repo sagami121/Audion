@@ -897,6 +897,23 @@ const App: React.FC = () => {
                     <input type="checkbox" id="checkDiscordRPC" />
                   </label>
                 </div>
+                <div className="setting-divider"></div>
+                <div className="setting-item">
+                  <label className="form-group">
+                    <span data-i18n="update_channel">更新チャンネル</span>
+                    <select
+                      id="updateChannelSelect"
+                      className="select-input"
+                      style={{ marginTop: '8px' }}
+                    >
+                      <option value="stable">Stable</option>
+                      <option value="beta">Beta</option>
+                    </select>
+                  </label>
+                  <p className="setting-hint" data-i18n="update_channel_hint">
+                    Beta はプレリリース版を優先して確認します。
+                  </p>
+                </div>
               </div>
 
               <div className="settings-section" id="settings-appearance">
@@ -1163,6 +1180,12 @@ const App: React.FC = () => {
                     style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 20px 0' }}
                   >
                     Version <span id="appVersion">0.0.0</span>
+                  </p>
+                  <p
+                    className="version-text"
+                    style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 12px 0' }}
+                  >
+                    <span id="updateChannelLabel">Stable Channel</span>
                   </p>
 
                   <button className="btn-secondary" id="btnCheckUpdate" style={{ width: '100%' }}>

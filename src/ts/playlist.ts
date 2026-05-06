@@ -188,6 +188,8 @@ export async function loadPlaylist(
   if (settings.theme) setTheme(settings.theme);
   else setTheme('dark');
 
+  state.updateChannel = settings.updateChannel === 'beta' ? 'beta' : 'stable';
+
   if (settings.speed) setSpeed(settings.speed);
 
   if (settings.playlistPosition) {

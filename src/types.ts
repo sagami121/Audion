@@ -39,6 +39,7 @@ export interface AppState {
   shuffleOrder: number[];
   lang: 'ja' | 'en' | 'ko' | 'zh';
   theme: 'dark' | 'light';
+  updateChannel: 'stable' | 'beta';
   speed: number;
   version: string;
   lyrics: LyricLine[];

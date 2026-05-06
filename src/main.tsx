@@ -118,6 +118,8 @@ let speedLbl: HTMLSpanElement | null = null;
 let langSelect: HTMLSelectElement | null = null;
 let btnThemeDark: HTMLButtonElement | null = null;
 let btnThemeLight: HTMLButtonElement | null = null;
+let updateChannelSelect: HTMLSelectElement | null = null;
+let updateChannelLabel: HTMLSpanElement | null = null;
 let opacitySlider: HTMLInputElement | null = null;
 let opacityLbl: HTMLSpanElement | null = null;
 
@@ -379,6 +381,15 @@ function setTheme(theme: string) {
   applyUiOpacity(uiOpacityValue);
 
   saveSettings();
+}
+
+function setUpdateChannel(channel: string) {
+  state.updateChannel = channel === 'beta' ? 'beta' : 'stable';
+  if (updateChannelSelect) updateChannelSelect.value = state.updateChannel;
+  if (updateChannelLabel) {
+    updateChannelLabel.textContent =
+      state.updateChannel === 'beta' ? 'Beta Channel' : 'Stable Channel';
+  }
 }
 
 function updateLanguage(lang: string) {
@@ -850,6 +861,7 @@ function saveSettings() {
     muted: state.muted,
     lang: state.lang,
     theme: state.theme,
+    updateChannel: state.updateChannel,
     speed: state.speed,
     showLyrics: state.showLyrics,
     eqEnabled: state.eqEnabled,
@@ -1049,6 +1061,7 @@ function setupLegacyLogic() {
     if (checkRestoreSession) checkRestoreSession.checked = state.restoreSession;
     if (checkShowLyrics) checkShowLyrics.checked = state.showLyrics;
     if (checkDiscordRPC) checkDiscordRPC.checked = state.discordRPCEnabled;
+    setUpdateChannel(state.updateChannel);
     if (checkHwAccel) checkHwAccel.checked = localStorage.getItem('af_hw_accel') !== 'false';
     if (langSelect) langSelect.value = state.lang;
     btnThemeDark?.classList.toggle('active', state.theme === 'dark');
@@ -1102,6 +1115,10 @@ function setupLegacyLogic() {
       state.discordRPCEnabled = checkDiscordRPC.checked;
       localStorage.setItem('af_discord_rpc', state.discordRPCEnabled.toString());
       updateDiscordRPC();
+    }
+
+    if (updateChannelSelect && updateChannelSelect.value !== state.updateChannel) {
+      setUpdateChannel(updateChannelSelect.value);
     }
 
     if (checkHwAccel) {
@@ -2057,6 +2074,10 @@ if (rootEl) {
     langSelect = document.getElementById('langSelect') as HTMLSelectElement | null;
     btnThemeDark = document.getElementById('btnThemeDark') as HTMLButtonElement | null;
     btnThemeLight = document.getElementById('btnThemeLight') as HTMLButtonElement | null;
+    updateChannelSelect = document.getElementById(
+      'updateChannelSelect'
+    ) as HTMLSelectElement | null;
+    updateChannelLabel = document.getElementById('updateChannelLabel') as HTMLSpanElement | null;
     opacitySlider = document.getElementById('opacitySlider') as HTMLInputElement | null;
     opacityLbl = document.getElementById('opacityLbl') as HTMLSpanElement | null;
 
@@ -2188,6 +2209,7 @@ if (rootEl) {
 
     // Apply saved opacity
     setUiOpacity(uiOpacityValue);
+    setUpdateChannel(state.updateChannel);
 
     // Init custom dropdowns
     initCustomSelects();

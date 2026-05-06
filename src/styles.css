@@ -446,6 +446,19 @@ body {
   margin-bottom: 16px;
 }
 
+.settings-section .setting-item > .form-group {
+  margin-bottom: 0;
+}
+
+.settings-section .form-group > span[data-i18n] {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .form-group label {
   display: block;
   font-size: 0.75rem;
