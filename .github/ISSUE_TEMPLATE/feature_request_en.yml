@@ -1,7 +1,7 @@
 name: Feature Request
 description: Suggest a new feature or improvement for Audion
-title: "[Feature]: "
-labels: ["enhancement"]
+title: '[Feature]: '
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,7 @@ body:
     attributes:
       label: Summary
       description: What feature or improvement would you like?
-      placeholder: "Example: Add a setting to change the lyrics font size."
+      placeholder: 'Example: Add a setting to change the lyrics font size.'
     validations:
       required: true
 
@@ -22,7 +22,7 @@ body:
     attributes:
       label: Problem
       description: What problem or limitation are you trying to solve?
-      placeholder: "Example: Lyrics can be hard to read on some screen sizes."
+      placeholder: 'Example: Lyrics can be hard to read on some screen sizes.'
     validations:
       required: true
 

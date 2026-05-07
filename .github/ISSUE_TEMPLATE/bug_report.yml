@@ -1,7 +1,7 @@
 name: バグ報告
 description: Audion の不具合を報告する
-title: "[Bug]: "
-labels: ["bug"]
+title: '[Bug]: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:

@@ -1,7 +1,7 @@
 name: 機能要望
 description: Audion に追加してほしい機能や改善案を提案する
-title: "[Feature]: "
-labels: ["enhancement"]
+title: '[Feature]: '
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:

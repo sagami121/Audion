@@ -1,7 +1,7 @@
 name: Bug Report
 description: Report a bug in Audion
-title: "[Bug]: "
-labels: ["bug"]
+title: '[Bug]: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,7 @@ body:
     attributes:
       label: Summary
       description: What bug are you experiencing?
-      placeholder: "Example: Lyrics shift out of position when lyrics display is enabled during playback."
+      placeholder: 'Example: Lyrics shift out of position when lyrics display is enabled during playback.'
     validations:
       required: true
 
@@ -63,7 +63,7 @@ body:
     id: app-version
     attributes:
       label: Audion Version
-      placeholder: "Example: 1.0.7"
+      placeholder: 'Example: 1.0.7'
 
   - type: textarea
     id: attachments
