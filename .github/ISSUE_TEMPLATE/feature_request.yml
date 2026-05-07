@@ -1,0 +1,47 @@
+name: 機能要望
+description: Audion に追加してほしい機能や改善案を提案する
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提案ありがとうございます。使いたい場面や困っていることも一緒に書いてもらえると検討しやすくなります。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: どのような機能や改善を希望しますか？
+      placeholder: 例：歌詞表示のフォントサイズを設定から変更できるようにしたい
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい課題
+      description: 今どのような点で困っていますか？
+      placeholder: 例：画面サイズによって歌詞が読みづらいことがある
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案する解決策
+      description: 具体的な挙動や UI のイメージがあれば書いてください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 代替案
+      description: 他に考えた方法があれば書いてください。
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 補足
+      description: 参考画像、関連リンク、似た機能の例などがあれば添付してください。

@@ -1,0 +1,47 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Audion
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your idea. It helps to include the situation where you would use it and the problem it solves.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What feature or improvement would you like?
+      placeholder: "Example: Add a setting to change the lyrics font size."
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem or limitation are you trying to solve?
+      placeholder: "Example: Lyrics can be hard to read on some screen sizes."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the behavior, UI, or workflow you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Describe any alternative solutions you considered.
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add screenshots, links, examples from other apps, or anything else useful.

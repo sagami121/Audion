@@ -1,0 +1,78 @@
+name: バグ報告
+description: Audion の不具合を報告する
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。できるだけ具体的に書いてもらえると、原因を追いやすくなります。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: どのような不具合が起きていますか？
+      placeholder: 例：再生中に歌詞表示をオンにすると、表示位置がずれる
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 不具合を再現するための手順を書いてください。
+      placeholder: |
+        1. アプリを起動する
+        2. 音楽ファイルを追加する
+        3. 設定から歌詞表示をオンにする
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+      description: 本来どう動いてほしいですか？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+      description: 実際にはどうなりましたか？
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS
+        - Linux
+        - その他
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Audion のバージョン
+      placeholder: 例：1.0.7
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: スクリーンショット・ログ
+      description: 画面やログがあれば添付してください。
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 補足
+      description: 関連しそうな情報があれば書いてください。
