@@ -18,6 +18,7 @@ export const state: AppState = {
   shuffleOrder: [],
   lang: saved.lang || 'ja',
   theme: saved.theme || 'dark',
+  layoutMode: saved.layoutMode === 'classic' ? 'classic' : 'beta',
   updateChannel: saved.updateChannel || 'stable',
   speed: saved.speed || 1.0,
   version: '0.0.0',

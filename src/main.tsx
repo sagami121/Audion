@@ -118,6 +118,7 @@ let speedLbl: HTMLSpanElement | null = null;
 let langSelect: HTMLSelectElement | null = null;
 let btnThemeDark: HTMLButtonElement | null = null;
 let btnThemeLight: HTMLButtonElement | null = null;
+let layoutModeSelect: HTMLSelectElement | null = null;
 let updateChannelSelect: HTMLSelectElement | null = null;
 let updateChannelLabel: HTMLSpanElement | null = null;
 let opacitySlider: HTMLInputElement | null = null;
@@ -163,6 +164,8 @@ let tabContents: NodeListOf<HTMLDivElement> | null = null;
 
 let settingsNavBtns: NodeListOf<HTMLButtonElement> | null = null;
 let settingsSections: NodeListOf<HTMLDivElement> | null = null;
+let settingsSearchInput: HTMLInputElement | null = null;
+let settingsSearchEmpty: HTMLDivElement | null = null;
 
 let compThreshold: HTMLInputElement | null = null;
 let compKnee: HTMLInputElement | null = null;
@@ -392,6 +395,13 @@ function setTheme(theme: string) {
   saveSettings();
 }
 
+function applyLayoutMode(mode: 'beta' | 'classic') {
+  state.layoutMode = mode;
+  document.body.classList.remove('layout-beta', 'layout-classic');
+  document.body.classList.add(`layout-${mode}`);
+  if (layoutModeSelect) layoutModeSelect.value = mode;
+}
+
 function setUpdateChannel(channel: string) {
   state.updateChannel = channel === 'beta' ? 'beta' : 'stable';
   if (updateChannelSelect) updateChannelSelect.value = state.updateChannel;
@@ -430,6 +440,75 @@ function updateLanguage(lang: string) {
   updateCount();
   populatePresetSelect();
   document.body.classList.remove('i18n-pending');
+}
+
+function normalizeSearchText(value: string): string {
+  return value.normalize('NFKC').toLowerCase().trim();
+}
+
+function switchSettingsTab(tabId: string): void {
+  settingsNavBtns?.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabId));
+  settingsSections?.forEach((section) => {
+    section.classList.toggle('active', section.id === `settings-${tabId}`);
+  });
+}
+
+function getSettingsSectionText(section: HTMLElement): string {
+  const tabId = section.id.replace('settings-', '');
+  const navText =
+    Array.from(settingsNavBtns || []).find((btn) => btn.dataset.tab === tabId)?.textContent || '';
+  const inputText = Array.from(
+    section.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')
+  )
+    .map((input) => `${input.placeholder} ${input.value}`)
+    .join(' ');
+
+  return normalizeSearchText(`${navText} ${section.textContent || ''} ${inputText}`);
+}
+
+function applySettingsSearch(): void {
+  const query = normalizeSearchText(settingsSearchInput?.value || '');
+  const layout = settingsModal?.querySelector('.settings-layout');
+  const isSearching = query.length > 0;
+  let hasResults = false;
+
+  layout?.classList.toggle('searching', isSearching);
+
+  settingsSections?.forEach((section) => {
+    const items = Array.from(section.querySelectorAll<HTMLElement>('.setting-item'));
+    const dividers = Array.from(section.querySelectorAll<HTMLElement>('.setting-divider'));
+
+    section.classList.remove('search-hidden');
+    items.forEach((item) => item.classList.remove('search-hidden'));
+    dividers.forEach((divider) => divider.classList.remove('search-hidden'));
+
+    if (!isSearching) return;
+
+    if (items.length > 0) {
+      let sectionHasMatch = false;
+      items.forEach((item) => {
+        const matches = getSettingsSectionText(item).includes(query);
+        item.classList.toggle('search-hidden', !matches);
+        sectionHasMatch ||= matches;
+      });
+
+      dividers.forEach((divider) => divider.classList.add('search-hidden'));
+      section.classList.toggle('search-hidden', !sectionHasMatch);
+      hasResults ||= sectionHasMatch;
+      return;
+    }
+
+    const sectionMatches = getSettingsSectionText(section).includes(query);
+    section.classList.toggle('search-hidden', !sectionMatches);
+    hasResults ||= sectionMatches;
+  });
+
+  if (settingsSearchEmpty) settingsSearchEmpty.hidden = !isSearching || hasResults;
+}
+
+function clearSettingsSearch(): void {
+  if (settingsSearchInput) settingsSearchInput.value = '';
+  applySettingsSearch();
 }
 
 function setSpeed(val: number) {
@@ -871,6 +950,7 @@ function saveSettings() {
     muted: state.muted,
     lang: state.lang,
     theme: state.theme,
+    layoutMode: state.layoutMode,
     updateChannel: state.updateChannel,
     speed: state.speed,
     showLyrics: state.showLyrics,
@@ -1074,12 +1154,13 @@ function setupLegacyLogic() {
     setUpdateChannel(state.updateChannel);
     if (checkHwAccel) checkHwAccel.checked = localStorage.getItem('af_hw_accel') !== 'false';
     if (langSelect) langSelect.value = state.lang;
+    if (layoutModeSelect) layoutModeSelect.value = state.layoutMode;
     btnThemeDark?.classList.toggle('active', state.theme === 'dark');
     btnThemeLight?.classList.toggle('active', state.theme === 'light');
 
     // Reset to general tab
-    settingsNavBtns?.forEach((b) => b.classList.toggle('active', b.dataset.tab === 'general'));
-    settingsSections?.forEach((s) => s.classList.toggle('active', s.id === 'settings-general'));
+    clearSettingsSearch();
+    switchSettingsTab('general');
 
     settingsModal?.classList.add('active');
   });
@@ -1087,12 +1168,13 @@ function setupLegacyLogic() {
   settingsNavBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-      settingsNavBtns?.forEach((b) => b.classList.toggle('active', b === btn));
-      settingsSections?.forEach((section) => {
-        section.classList.toggle('active', section.id === `settings-${tabId}`);
-      });
+      clearSettingsSearch();
+      if (tabId) switchSettingsTab(tabId);
     });
   });
+
+  settingsSearchInput?.addEventListener('input', applySettingsSearch);
+
   btnCloseSettings?.addEventListener('click', () => settingsModal?.classList.remove('active'));
   settingsModal?.addEventListener('click', (e: MouseEvent) => {
     if (e.target === settingsModal) settingsModal?.classList.remove('active');
@@ -1129,6 +1211,14 @@ function setupLegacyLogic() {
 
     if (updateChannelSelect && updateChannelSelect.value !== state.updateChannel) {
       setUpdateChannel(updateChannelSelect.value);
+    }
+
+    if (
+      layoutModeSelect &&
+      (layoutModeSelect.value === 'beta' || layoutModeSelect.value === 'classic') &&
+      layoutModeSelect.value !== state.layoutMode
+    ) {
+      applyLayoutMode(layoutModeSelect.value);
     }
 
     if (checkHwAccel) {
@@ -2067,6 +2157,7 @@ if (rootEl) {
     langSelect = document.getElementById('langSelect') as HTMLSelectElement | null;
     btnThemeDark = document.getElementById('btnThemeDark') as HTMLButtonElement | null;
     btnThemeLight = document.getElementById('btnThemeLight') as HTMLButtonElement | null;
+    layoutModeSelect = document.getElementById('layoutModeSelect') as HTMLSelectElement | null;
     updateChannelSelect = document.getElementById(
       'updateChannelSelect'
     ) as HTMLSelectElement | null;
@@ -2117,6 +2208,8 @@ if (rootEl) {
       '.settings-nav-btn'
     ) as NodeListOf<HTMLButtonElement>;
     settingsSections = document.querySelectorAll('.settings-section') as NodeListOf<HTMLDivElement>;
+    settingsSearchInput = document.getElementById('settingsSearch') as HTMLInputElement | null;
+    settingsSearchEmpty = document.getElementById('settingsSearchEmpty') as HTMLDivElement | null;
 
     compThreshold = document.getElementById('compThreshold') as HTMLInputElement | null;
     compKnee = document.getElementById('compKnee') as HTMLInputElement | null;
@@ -2202,6 +2295,7 @@ if (rootEl) {
 
     // Apply saved opacity
     updateLanguage(state.lang);
+    applyLayoutMode(state.layoutMode);
     setUiOpacity(uiOpacityValue);
     setUpdateChannel(state.updateChannel);
 

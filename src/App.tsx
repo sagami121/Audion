@@ -10,6 +10,8 @@ const App: React.FC = () => {
       const settings = JSON.parse(localStorage.getItem('af_settings') || '{}');
       const theme = settings.theme || 'dark';
       document.documentElement.classList.add(theme + '-theme');
+      const layoutMode = settings.layoutMode === 'classic' ? 'classic' : 'beta';
+      document.body.classList.add(`layout-${layoutMode}`);
 
       const savedW = localStorage.getItem('af_sidebar_w');
       if (savedW) {
@@ -267,7 +269,12 @@ const App: React.FC = () => {
               />
             </div>
             <div className="vinyl-center" id="vinylCenter"></div>
-            <div className="lyrics-container" id="lyricsContainer">
+            <div
+              className="lyrics-container"
+              id="lyricsContainer"
+              aria-live="polite"
+              aria-label="Lyrics"
+            >
               <div className="lyrics-inner" id="lyricsInner"></div>
             </div>
           </div>
@@ -792,86 +799,127 @@ const App: React.FC = () => {
           </div>
           <div className="settings-layout">
             <aside className="settings-sidebar">
-              <button className="settings-nav-btn active" data-tab="general">
+              <div className="settings-search">
                 <svg
-                  width="18"
-                  height="18"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.5"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
+                  aria-hidden="true"
                 >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <span data-i18n="setting_general">一般</span>
-              </button>
-              <button className="settings-nav-btn" data-tab="appearance">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
-                >
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z"></path>
-                </svg>
-                <span data-i18n="setting_appearance">外観</span>
-              </button>
-              <button className="settings-nav-btn" data-tab="other">
-                <img
-                  src={settingsIcon}
-                  width="18"
-                  height="18"
-                  style={{ flexShrink: 0, opacity: 0.8, filter: 'var(--icon-filter)' }}
-                  alt="Settings"
+                <input
+                  type="search"
+                  id="settingsSearch"
+                  data-i18n-placeholder="settings_search_placeholder"
+                  placeholder="設定を検索..."
+                  aria-label="Search settings"
                 />
-                <span data-i18n="setting_other">その他</span>
-              </button>
-              <button className="settings-nav-btn" data-tab="feedback">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
-                >
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.5 8.5 0 0 1 4.7 1.4L21 4.5z"></path>
-                </svg>
-                <span data-i18n="setting_feedback">フィードバック</span>
-              </button>
-              <button className="settings-nav-btn" data-tab="version">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
-                >
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <span data-i18n="version">バージョン</span>
-              </button>
+              </div>
+              <details className="settings-nav-group" open>
+                <summary className="settings-nav-summary" data-i18n="setting_tree_core">
+                  Core
+                </summary>
+                <button className="settings-nav-btn active" data-tab="general">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="3" x2="9" y2="21"></line>
+                  </svg>
+                  <span data-i18n="setting_general">一般</span>
+                </button>
+                <button className="settings-nav-btn" data-tab="appearance">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z"></path>
+                  </svg>
+                  <span data-i18n="setting_appearance">外観</span>
+                </button>
+              </details>
+              <details className="settings-nav-group" open>
+                <summary className="settings-nav-summary" data-i18n="setting_tree_support">
+                  Support
+                </summary>
+                <button className="settings-nav-btn" data-tab="other">
+                  <img
+                    src={settingsIcon}
+                    width="18"
+                    height="18"
+                    style={{ flexShrink: 0, opacity: 0.8, filter: 'var(--icon-filter)' }}
+                    alt="Settings"
+                  />
+                  <span data-i18n="setting_other">その他</span>
+                </button>
+                <button className="settings-nav-btn" data-tab="feedback">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
+                  >
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.5 8.5 0 0 1 4.7 1.4L21 4.5z"></path>
+                  </svg>
+                  <span data-i18n="setting_feedback">フィードバック</span>
+                </button>
+                <button className="settings-nav-btn" data-tab="version">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0, minWidth: '18px', overflow: 'visible' }}
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  <span data-i18n="version">バージョン</span>
+                </button>
+              </details>
             </aside>
             <div className="settings-content">
+              <div
+                className="settings-search-empty"
+                id="settingsSearchEmpty"
+                data-i18n="settings_no_results"
+                hidden
+              >
+                該当する設定がありません
+              </div>
               <div className="settings-section active" id="settings-general">
                 <div className="setting-item">
                   <label className="setting-lbl">
@@ -917,6 +965,27 @@ const App: React.FC = () => {
               </div>
 
               <div className="settings-section" id="settings-appearance">
+                <div className="setting-item">
+                  <label className="form-group">
+                    <span data-i18n="layout_mode">UI Layout</span>
+                    <select
+                      id="layoutModeSelect"
+                      className="select-input"
+                      style={{ marginTop: '8px' }}
+                    >
+                      <option value="beta" data-i18n="layout_mode_beta">
+                        Beta Layout
+                      </option>
+                      <option value="classic" data-i18n="layout_mode_classic">
+                        Classic Layout
+                      </option>
+                    </select>
+                  </label>
+                  <p className="setting-hint" data-i18n="layout_mode_hint">
+                    Classic keeps the previous Audion player layout.
+                  </p>
+                </div>
+                <div className="setting-divider"></div>
                 <div className="setting-item">
                   <label className="form-group">
                     <span data-i18n="theme">テーマ</span>
