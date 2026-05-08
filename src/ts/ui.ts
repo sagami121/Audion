@@ -92,11 +92,21 @@ export function createPlaylistRow(
 
   const displayName = track.name;
   const displaySub = track.artist ? track.artist : '';
+  const coverThumb = track.cover
+    ? `<img class="pl-cover-img" src="${esc(track.cover)}" alt="" loading="lazy" />`
+    : `<span class="pl-cover-fallback" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="17" cy="16" r="3" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+      </span>`;
   li.innerHTML = `
     <span class="pl-num">${displayIdx + 1}</span>
     <span class="pl-bars">
       <span class="pl-bar"></span><span class="pl-bar"></span><span class="pl-bar"></span>
     </span>
+    <span class="pl-cover">${coverThumb}</span>
     <div class="pl-info">
       <span class="pl-name" title="${esc(displayName)}">
         ${esc(displayName)}
