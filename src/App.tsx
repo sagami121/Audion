@@ -140,6 +140,13 @@ const App: React.FC = () => {
               <button className="pl-view-btn" data-view="recent" data-i18n="view_recent">
                 最近追加
               </button>
+              <button
+                className="pl-view-btn"
+                data-view="recent_played"
+                data-i18n="view_recent_played"
+              >
+                最近再生
+              </button>
               <button className="pl-view-btn" data-view="popular" data-i18n="view_popular">
                 人気順
               </button>

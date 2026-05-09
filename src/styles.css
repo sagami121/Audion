@@ -2723,6 +2723,7 @@ body.light-theme .vol-lbl {
 /* Playlist Views Switcher */
 .pl-views {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 8px 12px;
   background: var(--layer-bg);
@@ -2730,7 +2731,7 @@ body.light-theme .vol-lbl {
 }
 
 .pl-view-btn {
-  flex: 1;
+  flex: 1 1 calc(50% - 4px);
   padding: 6px 4px;
   font-size: 11px;
   font-weight: 600;

@@ -14,6 +14,10 @@ export function getPlaylistView(): { track: Track; globalIdx: number }[] {
 
   if (state.plView === 'recent') {
     list.sort((a, b) => b.track.addedAt - a.track.addedAt);
+  } else if (state.plView === 'recent_played') {
+    list = list
+      .filter((item) => item.track.lastPlayedAt)
+      .sort((a, b) => (b.track.lastPlayedAt || 0) - (a.track.lastPlayedAt || 0));
   } else if (state.plView === 'popular') {
     list.sort((a, b) => (b.track.playCount || 0) - (a.track.playCount || 0));
   } else if (state.plView === 'favorites') {
@@ -42,6 +46,8 @@ export async function addPaths(
     const pathValue = isObj ? item.path : item;
     const addedAt = isObj && item.addedAt ? item.addedAt : Date.now();
     const playCount = isObj && item.playCount ? item.playCount : 0;
+    const lastPlayedAt = isObj && item.lastPlayedAt ? item.lastPlayedAt : undefined;
+    const favorite = isObj && item.favorite ? item.favorite : false;
 
     const normPath = normalizePath(pathValue).toLowerCase();
     if (state.tracks.some((t) => normalizePath(t.path).toLowerCase() === normPath)) {
@@ -66,7 +72,9 @@ export async function addPaths(
           cover: meta.cover,
           duration: meta.duration || 0,
           addedAt,
-          playCount
+          playCount,
+          lastPlayedAt,
+          favorite
         });
 
         const idx = state.tracks.length - 1;
@@ -141,7 +149,9 @@ export async function loadPlaylist(
         const storedItems = JSON.parse(stored);
         if (storedItems.length) {
           const items = storedItems.map((item: any) =>
-            typeof item === 'string' ? { path: item, addedAt: Date.now(), playCount: 0 } : item
+            typeof item === 'string'
+              ? { path: item, addedAt: Date.now(), playCount: 0, lastPlayedAt: undefined }
+              : item
           );
           await addPathsFn(items, true);
         }

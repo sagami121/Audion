@@ -2,6 +2,11 @@ import { AppState } from '../types';
 
 const savedStr = localStorage.getItem('af_settings');
 const saved = savedStr ? JSON.parse(savedStr) : {};
+const savedPlView = ['all', 'recent', 'recent_played', 'popular', 'favorites'].includes(
+  saved.plView
+)
+  ? saved.plView
+  : 'all';
 
 export const state: AppState = {
   tracks: [],
@@ -48,7 +53,7 @@ export const state: AppState = {
     jazz: [2, 1, 0, -1, -2, -1, 1, 3, 3, 2],
     classical: [1, 2, 1, 0, -1, 0, 2, 3, 3, 1]
   },
-  plView: saved.plView || 'all',
+  plView: savedPlView,
   reverbEnabled: saved.reverbEnabled || false,
   reverbLevel: saved.reverbLevel !== undefined ? saved.reverbLevel : 0.4,
   reverbType: saved.reverbType || 'hall',

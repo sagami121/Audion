@@ -199,6 +199,9 @@ let sidebarContextMenu: HTMLDivElement | null = null;
 let cmPosLeft: HTMLDivElement | null = null;
 let cmPosRight: HTMLDivElement | null = null;
 
+const MINI_PLAYER_WIDTH = 1040;
+const MINI_PLAYER_HEIGHT = 80;
+
 let normalSize: LogicalSize | PhysicalSize = new LogicalSize(1000, 660);
 
 // UI Opacity (0.0 – 1.0). Default matches the original CSS default of 1.0
@@ -666,7 +669,7 @@ async function toggleMiniMode() {
 
   if (state.miniPlayer) {
     normalSize = await appWindow.innerSize();
-    const miniSize = new LogicalSize(860, 80);
+    const miniSize = new LogicalSize(MINI_PLAYER_WIDTH, MINI_PLAYER_HEIGHT);
 
     await appWindow.setResizable(false);
     await appWindow.setMinSize(miniSize);
@@ -958,7 +961,8 @@ function saveSettings() {
     eqGains: state.eqGains,
     compEnabled: state.compEnabled,
     compSettings: state.compSettings,
-    playlistPosition: state.playlistPosition
+    playlistPosition: state.playlistPosition,
+    plView: state.plView
   };
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
@@ -1758,7 +1762,7 @@ function setupLegacyLogic() {
 
   plViewBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const view = btn.dataset.view as 'all' | 'recent' | 'popular';
+      const view = btn.dataset.view as typeof state.plView;
       if (!view) return;
       state.plView = view;
 
@@ -1768,8 +1772,16 @@ function setupLegacyLogic() {
     });
   });
 
+  plViewBtns?.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === state.plView);
+  });
+
   plSearch?.addEventListener('input', () => {
     updatePlaylistUI();
+  });
+
+  window.addEventListener('audion-play-history-changed', () => {
+    if (state.plView === 'recent_played') updatePlaylistUI();
   });
 
   btnSavePlaylist?.addEventListener('click', async () => {
@@ -1792,7 +1804,9 @@ function setupLegacyLogic() {
         artist: t.artist || '',
         album: t.album || '',
         playCount: t.playCount || 0,
-        addedAt: t.addedAt || Date.now()
+        addedAt: t.addedAt || Date.now(),
+        lastPlayedAt: t.lastPlayedAt,
+        favorite: t.favorite || false
       }));
 
       const jsonStr = JSON.stringify(playlistData, null, 2);
