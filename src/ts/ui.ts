@@ -168,9 +168,12 @@ export function setupPlaylistRowEvents(row: HTMLLIElement, index: number): void 
     const cm = document.getElementById('contextMenu');
     if (!cm) return;
 
-    cmIndex = index;
+    if (state.plView !== 'all') {
+      cm.style.display = 'none';
+      return;
+    }
 
-    const canReorder = state.plView === 'all';
+    cmIndex = index;
 
     // Disable buttons if move is not possible
     const btnUp = document.getElementById('cmMoveUp');
@@ -178,22 +181,18 @@ export function setupPlaylistRowEvents(row: HTMLLIElement, index: number): void 
     const btnTop = document.getElementById('cmMoveTop');
     const btnBottom = document.getElementById('cmMoveBottom');
 
-    if (btnUp) (btnUp as HTMLElement).style.opacity = !canReorder || index === 0 ? '0.3' : '1';
-    if (btnUp)
-      (btnUp as HTMLElement).style.pointerEvents = !canReorder || index === 0 ? 'none' : 'auto';
+    if (btnUp) (btnUp as HTMLElement).style.opacity = index === 0 ? '0.3' : '1';
+    if (btnUp) (btnUp as HTMLElement).style.pointerEvents = index === 0 ? 'none' : 'auto';
 
-    if (btnTop) (btnTop as HTMLElement).style.opacity = !canReorder || index === 0 ? '0.3' : '1';
-    if (btnTop)
-      (btnTop as HTMLElement).style.pointerEvents = !canReorder || index === 0 ? 'none' : 'auto';
+    if (btnTop) (btnTop as HTMLElement).style.opacity = index === 0 ? '0.3' : '1';
+    if (btnTop) (btnTop as HTMLElement).style.pointerEvents = index === 0 ? 'none' : 'auto';
 
     const isLast = index === state.tracks.length - 1;
-    if (btnDown) (btnDown as HTMLElement).style.opacity = !canReorder || isLast ? '0.3' : '1';
-    if (btnDown)
-      (btnDown as HTMLElement).style.pointerEvents = !canReorder || isLast ? 'none' : 'auto';
+    if (btnDown) (btnDown as HTMLElement).style.opacity = isLast ? '0.3' : '1';
+    if (btnDown) (btnDown as HTMLElement).style.pointerEvents = isLast ? 'none' : 'auto';
 
-    if (btnBottom) (btnBottom as HTMLElement).style.opacity = !canReorder || isLast ? '0.3' : '1';
-    if (btnBottom)
-      (btnBottom as HTMLElement).style.pointerEvents = !canReorder || isLast ? 'none' : 'auto';
+    if (btnBottom) (btnBottom as HTMLElement).style.opacity = isLast ? '0.3' : '1';
+    if (btnBottom) (btnBottom as HTMLElement).style.pointerEvents = isLast ? 'none' : 'auto';
 
     cm.style.display = 'block';
 

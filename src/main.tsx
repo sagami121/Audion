@@ -50,7 +50,9 @@ import {
   addPaths as addPathsLogic,
   getPlaylistView,
   toggleFavorite,
-  loadPlaylist as loadPlaylistLogic
+  loadPlaylist as loadPlaylistLogic,
+  parseM3uPlaylist,
+  serializeM3uPlaylist
 } from './ts/playlist';
 import {
   updateEqUI as updateEqUILogic,
@@ -728,6 +730,13 @@ function updatePlaylistUI() {
   if (playlist) {
     ui.renderPlaylist(playlist, getPlaylistView(), onPlaylistRowClick, plSearch?.value || '');
   }
+}
+
+function switchPlaylistView(view: typeof state.plView) {
+  state.plView = view;
+  plViewBtns?.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+  updatePlaylistUI();
+  saveSettings();
 }
 
 function onReorder(from: number, to: number) {
@@ -1764,11 +1773,7 @@ function setupLegacyLogic() {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view as typeof state.plView;
       if (!view) return;
-      state.plView = view;
-
-      plViewBtns?.forEach((b) => b.classList.toggle('active', b === btn));
-      updatePlaylistUI();
-      saveSettings();
+      switchPlaylistView(view);
     });
   });
 
@@ -1793,24 +1798,33 @@ function setupLegacyLogic() {
     try {
       const filePath = await dialogSave({
         title: dict.save_playlist,
-        defaultPath: 'playlist.json',
-        filters: [{ name: 'Audion Playlist', extensions: ['json'] }]
+        defaultPath: 'playlist.m3u',
+        filters: [
+          { name: 'M3U Playlist', extensions: ['m3u', 'm3u8'] },
+          { name: 'Audion Playlist', extensions: ['json'] }
+        ]
       });
       if (!filePath) return;
 
-      const playlistData = state.tracks.map((t) => ({
-        path: t.path,
-        name: t.name,
-        artist: t.artist || '',
-        album: t.album || '',
-        playCount: t.playCount || 0,
-        addedAt: t.addedAt || Date.now(),
-        lastPlayedAt: t.lastPlayedAt,
-        favorite: t.favorite || false
-      }));
+      const isM3u = !/\.json$/i.test(filePath);
+      const content = isM3u
+        ? serializeM3uPlaylist(state.tracks)
+        : JSON.stringify(
+            state.tracks.map((t) => ({
+              path: t.path,
+              name: t.name,
+              artist: t.artist || '',
+              album: t.album || '',
+              playCount: t.playCount || 0,
+              addedAt: t.addedAt || Date.now(),
+              lastPlayedAt: t.lastPlayedAt,
+              favorite: t.favorite || false
+            })),
+            null,
+            2
+          );
 
-      const jsonStr = JSON.stringify(playlistData, null, 2);
-      if (invoke) await invoke('save_text_file', { path: filePath, content: jsonStr });
+      if (invoke) await invoke('save_text_file', { path: filePath, content });
       showToast(dict.toast_saved);
     } catch (e) {
       console.error('Save failed', e);
@@ -1824,20 +1838,28 @@ function setupLegacyLogic() {
       const file = await dialogOpen({
         title: dict.load_playlist,
         multiple: false,
-        filters: [{ name: 'Audion Playlist', extensions: ['json'] }]
+        filters: [
+          { name: 'Playlist', extensions: ['m3u', 'm3u8', 'json'] },
+          { name: 'M3U Playlist', extensions: ['m3u', 'm3u8'] },
+          { name: 'Audion Playlist', extensions: ['json'] }
+        ]
       });
       if (!file) return;
 
       if (!invoke) return;
       const content = (await invoke('read_text_file', { path: file })) as string;
-      const tracks = JSON.parse(content);
+      const isM3u = /\.m3u8?$/i.test(file) || content.trimStart().startsWith('#EXTM3U');
+      const paths = isM3u
+        ? parseM3uPlaylist(content, file)
+        : JSON.parse(content)
+            .map((t: any) => t.path)
+            .filter((p: any) => !!p);
 
-      if (Array.isArray(tracks)) {
-        const paths = tracks.map((t: any) => t.path).filter((p: any) => !!p);
-        if (paths.length) {
-          await addPathsWrapper(paths);
-          showToast(`${paths.length}${dict.toast_loaded}`);
-        }
+      if (Array.isArray(paths)) {
+        if (!paths.length) throw new Error('No playlist entries');
+        await addPathsWrapper(paths);
+        switchPlaylistView('all');
+        showToast(`${paths.length}${dict.toast_loaded}`);
       } else {
         throw new Error('Invalid format');
       }

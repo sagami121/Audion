@@ -9,6 +9,47 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const metaCache = new Map();
 
+function getPlaylistDir(path: string): string {
+  const index = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  return index >= 0 ? path.slice(0, index) : '';
+}
+
+function isAbsolutePath(path: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('\\\\') || path.startsWith('/');
+}
+
+function resolvePlaylistPath(entry: string, playlistPath: string): string {
+  const trimmed = entry.trim();
+  if (!trimmed || isAbsolutePath(trimmed)) return trimmed;
+
+  const baseDir = getPlaylistDir(playlistPath);
+  if (!baseDir) return trimmed;
+  const separator = baseDir.includes('\\') ? '\\' : '/';
+  return `${baseDir}${separator}${trimmed}`;
+}
+
+function formatM3uInfo(track: Track): string {
+  const duration = Number.isFinite(track.duration) ? Math.round(track.duration) : -1;
+  const title = track.artist ? `${track.artist} - ${track.name}` : track.name;
+  return `#EXTINF:${duration},${title}`;
+}
+
+export function serializeM3uPlaylist(tracks: Track[]): string {
+  const lines = ['#EXTM3U'];
+  tracks.forEach((track) => {
+    lines.push(formatM3uInfo(track), track.path);
+  });
+  return `${lines.join('\n')}\n`;
+}
+
+export function parseM3uPlaylist(content: string, playlistPath: string): string[] {
+  return content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => resolvePlaylistPath(line, playlistPath));
+}
+
 export function getPlaylistView(): { track: Track; globalIdx: number }[] {
   let list = state.tracks.map((track, globalIdx) => ({ track, globalIdx }));
 
