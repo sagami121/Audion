@@ -7,6 +7,7 @@ export interface Track {
   duration: number;
   addedAt: number;
   playCount: number;
+  lastPlayedAt?: number;
   favorite?: boolean;
 }
 
@@ -39,6 +40,7 @@ export interface AppState {
   shuffleOrder: number[];
   lang: 'ja' | 'en' | 'ko' | 'zh';
   theme: 'dark' | 'light';
+  layoutMode: 'beta' | 'classic';
   updateChannel: 'stable' | 'beta';
   speed: number;
   version: string;
@@ -52,7 +54,7 @@ export interface AppState {
   sidebarWidth: number;
   showLyrics: boolean;
   eqPresets: Record<string, number[]>;
-  plView: 'all' | 'recent' | 'popular' | 'favorites';
+  plView: 'all' | 'recent' | 'recent_played' | 'popular' | 'favorites';
   reverbEnabled: boolean;
   reverbLevel: number;
   reverbType: 'room' | 'hall' | 'cave';

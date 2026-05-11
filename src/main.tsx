@@ -50,7 +50,9 @@ import {
   addPaths as addPathsLogic,
   getPlaylistView,
   toggleFavorite,
-  loadPlaylist as loadPlaylistLogic
+  loadPlaylist as loadPlaylistLogic,
+  parseM3uPlaylist,
+  serializeM3uPlaylist
 } from './ts/playlist';
 import {
   updateEqUI as updateEqUILogic,
@@ -118,6 +120,7 @@ let speedLbl: HTMLSpanElement | null = null;
 let langSelect: HTMLSelectElement | null = null;
 let btnThemeDark: HTMLButtonElement | null = null;
 let btnThemeLight: HTMLButtonElement | null = null;
+let layoutModeSelect: HTMLSelectElement | null = null;
 let updateChannelSelect: HTMLSelectElement | null = null;
 let updateChannelLabel: HTMLSpanElement | null = null;
 let opacitySlider: HTMLInputElement | null = null;
@@ -163,6 +166,8 @@ let tabContents: NodeListOf<HTMLDivElement> | null = null;
 
 let settingsNavBtns: NodeListOf<HTMLButtonElement> | null = null;
 let settingsSections: NodeListOf<HTMLDivElement> | null = null;
+let settingsSearchInput: HTMLInputElement | null = null;
+let settingsSearchEmpty: HTMLDivElement | null = null;
 
 let compThreshold: HTMLInputElement | null = null;
 let compKnee: HTMLInputElement | null = null;
@@ -195,6 +200,9 @@ let btnDelayReset: HTMLButtonElement | null = null;
 let sidebarContextMenu: HTMLDivElement | null = null;
 let cmPosLeft: HTMLDivElement | null = null;
 let cmPosRight: HTMLDivElement | null = null;
+
+const MINI_PLAYER_WIDTH = 1040;
+const MINI_PLAYER_HEIGHT = 80;
 
 let normalSize: LogicalSize | PhysicalSize = new LogicalSize(1000, 660);
 
@@ -392,6 +400,13 @@ function setTheme(theme: string) {
   saveSettings();
 }
 
+function applyLayoutMode(mode: 'beta' | 'classic') {
+  state.layoutMode = mode;
+  document.body.classList.remove('layout-beta', 'layout-classic');
+  document.body.classList.add(`layout-${mode}`);
+  if (layoutModeSelect) layoutModeSelect.value = mode;
+}
+
 function setUpdateChannel(channel: string) {
   state.updateChannel = channel === 'beta' ? 'beta' : 'stable';
   if (updateChannelSelect) updateChannelSelect.value = state.updateChannel;
@@ -430,6 +445,75 @@ function updateLanguage(lang: string) {
   updateCount();
   populatePresetSelect();
   document.body.classList.remove('i18n-pending');
+}
+
+function normalizeSearchText(value: string): string {
+  return value.normalize('NFKC').toLowerCase().trim();
+}
+
+function switchSettingsTab(tabId: string): void {
+  settingsNavBtns?.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabId));
+  settingsSections?.forEach((section) => {
+    section.classList.toggle('active', section.id === `settings-${tabId}`);
+  });
+}
+
+function getSettingsSectionText(section: HTMLElement): string {
+  const tabId = section.id.replace('settings-', '');
+  const navText =
+    Array.from(settingsNavBtns || []).find((btn) => btn.dataset.tab === tabId)?.textContent || '';
+  const inputText = Array.from(
+    section.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')
+  )
+    .map((input) => `${input.placeholder} ${input.value}`)
+    .join(' ');
+
+  return normalizeSearchText(`${navText} ${section.textContent || ''} ${inputText}`);
+}
+
+function applySettingsSearch(): void {
+  const query = normalizeSearchText(settingsSearchInput?.value || '');
+  const layout = settingsModal?.querySelector('.settings-layout');
+  const isSearching = query.length > 0;
+  let hasResults = false;
+
+  layout?.classList.toggle('searching', isSearching);
+
+  settingsSections?.forEach((section) => {
+    const items = Array.from(section.querySelectorAll<HTMLElement>('.setting-item'));
+    const dividers = Array.from(section.querySelectorAll<HTMLElement>('.setting-divider'));
+
+    section.classList.remove('search-hidden');
+    items.forEach((item) => item.classList.remove('search-hidden'));
+    dividers.forEach((divider) => divider.classList.remove('search-hidden'));
+
+    if (!isSearching) return;
+
+    if (items.length > 0) {
+      let sectionHasMatch = false;
+      items.forEach((item) => {
+        const matches = getSettingsSectionText(item).includes(query);
+        item.classList.toggle('search-hidden', !matches);
+        sectionHasMatch ||= matches;
+      });
+
+      dividers.forEach((divider) => divider.classList.add('search-hidden'));
+      section.classList.toggle('search-hidden', !sectionHasMatch);
+      hasResults ||= sectionHasMatch;
+      return;
+    }
+
+    const sectionMatches = getSettingsSectionText(section).includes(query);
+    section.classList.toggle('search-hidden', !sectionMatches);
+    hasResults ||= sectionMatches;
+  });
+
+  if (settingsSearchEmpty) settingsSearchEmpty.hidden = !isSearching || hasResults;
+}
+
+function clearSettingsSearch(): void {
+  if (settingsSearchInput) settingsSearchInput.value = '';
+  applySettingsSearch();
 }
 
 function setSpeed(val: number) {
@@ -587,7 +671,7 @@ async function toggleMiniMode() {
 
   if (state.miniPlayer) {
     normalSize = await appWindow.innerSize();
-    const miniSize = new LogicalSize(860, 80);
+    const miniSize = new LogicalSize(MINI_PLAYER_WIDTH, MINI_PLAYER_HEIGHT);
 
     await appWindow.setResizable(false);
     await appWindow.setMinSize(miniSize);
@@ -646,6 +730,13 @@ function updatePlaylistUI() {
   if (playlist) {
     ui.renderPlaylist(playlist, getPlaylistView(), onPlaylistRowClick, plSearch?.value || '');
   }
+}
+
+function switchPlaylistView(view: typeof state.plView) {
+  state.plView = view;
+  plViewBtns?.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+  updatePlaylistUI();
+  saveSettings();
 }
 
 function onReorder(from: number, to: number) {
@@ -871,6 +962,7 @@ function saveSettings() {
     muted: state.muted,
     lang: state.lang,
     theme: state.theme,
+    layoutMode: state.layoutMode,
     updateChannel: state.updateChannel,
     speed: state.speed,
     showLyrics: state.showLyrics,
@@ -878,7 +970,8 @@ function saveSettings() {
     eqGains: state.eqGains,
     compEnabled: state.compEnabled,
     compSettings: state.compSettings,
-    playlistPosition: state.playlistPosition
+    playlistPosition: state.playlistPosition,
+    plView: state.plView
   };
   localStorage.setItem('af_settings', JSON.stringify(settings));
 }
@@ -1074,12 +1167,13 @@ function setupLegacyLogic() {
     setUpdateChannel(state.updateChannel);
     if (checkHwAccel) checkHwAccel.checked = localStorage.getItem('af_hw_accel') !== 'false';
     if (langSelect) langSelect.value = state.lang;
+    if (layoutModeSelect) layoutModeSelect.value = state.layoutMode;
     btnThemeDark?.classList.toggle('active', state.theme === 'dark');
     btnThemeLight?.classList.toggle('active', state.theme === 'light');
 
     // Reset to general tab
-    settingsNavBtns?.forEach((b) => b.classList.toggle('active', b.dataset.tab === 'general'));
-    settingsSections?.forEach((s) => s.classList.toggle('active', s.id === 'settings-general'));
+    clearSettingsSearch();
+    switchSettingsTab('general');
 
     settingsModal?.classList.add('active');
   });
@@ -1087,12 +1181,13 @@ function setupLegacyLogic() {
   settingsNavBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-      settingsNavBtns?.forEach((b) => b.classList.toggle('active', b === btn));
-      settingsSections?.forEach((section) => {
-        section.classList.toggle('active', section.id === `settings-${tabId}`);
-      });
+      clearSettingsSearch();
+      if (tabId) switchSettingsTab(tabId);
     });
   });
+
+  settingsSearchInput?.addEventListener('input', applySettingsSearch);
+
   btnCloseSettings?.addEventListener('click', () => settingsModal?.classList.remove('active'));
   settingsModal?.addEventListener('click', (e: MouseEvent) => {
     if (e.target === settingsModal) settingsModal?.classList.remove('active');
@@ -1129,6 +1224,14 @@ function setupLegacyLogic() {
 
     if (updateChannelSelect && updateChannelSelect.value !== state.updateChannel) {
       setUpdateChannel(updateChannelSelect.value);
+    }
+
+    if (
+      layoutModeSelect &&
+      (layoutModeSelect.value === 'beta' || layoutModeSelect.value === 'classic') &&
+      layoutModeSelect.value !== state.layoutMode
+    ) {
+      applyLayoutMode(layoutModeSelect.value);
     }
 
     if (checkHwAccel) {
@@ -1668,18 +1771,22 @@ function setupLegacyLogic() {
 
   plViewBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const view = btn.dataset.view as 'all' | 'recent' | 'popular';
+      const view = btn.dataset.view as typeof state.plView;
       if (!view) return;
-      state.plView = view;
-
-      plViewBtns?.forEach((b) => b.classList.toggle('active', b === btn));
-      updatePlaylistUI();
-      saveSettings();
+      switchPlaylistView(view);
     });
+  });
+
+  plViewBtns?.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === state.plView);
   });
 
   plSearch?.addEventListener('input', () => {
     updatePlaylistUI();
+  });
+
+  window.addEventListener('audion-play-history-changed', () => {
+    if (state.plView === 'recent_played') updatePlaylistUI();
   });
 
   btnSavePlaylist?.addEventListener('click', async () => {
@@ -1691,22 +1798,33 @@ function setupLegacyLogic() {
     try {
       const filePath = await dialogSave({
         title: dict.save_playlist,
-        defaultPath: 'playlist.json',
-        filters: [{ name: 'Audion Playlist', extensions: ['json'] }]
+        defaultPath: 'playlist.m3u',
+        filters: [
+          { name: 'M3U Playlist', extensions: ['m3u', 'm3u8'] },
+          { name: 'Audion Playlist', extensions: ['json'] }
+        ]
       });
       if (!filePath) return;
 
-      const playlistData = state.tracks.map((t) => ({
-        path: t.path,
-        name: t.name,
-        artist: t.artist || '',
-        album: t.album || '',
-        playCount: t.playCount || 0,
-        addedAt: t.addedAt || Date.now()
-      }));
+      const isM3u = !/\.json$/i.test(filePath);
+      const content = isM3u
+        ? serializeM3uPlaylist(state.tracks)
+        : JSON.stringify(
+            state.tracks.map((t) => ({
+              path: t.path,
+              name: t.name,
+              artist: t.artist || '',
+              album: t.album || '',
+              playCount: t.playCount || 0,
+              addedAt: t.addedAt || Date.now(),
+              lastPlayedAt: t.lastPlayedAt,
+              favorite: t.favorite || false
+            })),
+            null,
+            2
+          );
 
-      const jsonStr = JSON.stringify(playlistData, null, 2);
-      if (invoke) await invoke('save_text_file', { path: filePath, content: jsonStr });
+      if (invoke) await invoke('save_text_file', { path: filePath, content });
       showToast(dict.toast_saved);
     } catch (e) {
       console.error('Save failed', e);
@@ -1720,20 +1838,28 @@ function setupLegacyLogic() {
       const file = await dialogOpen({
         title: dict.load_playlist,
         multiple: false,
-        filters: [{ name: 'Audion Playlist', extensions: ['json'] }]
+        filters: [
+          { name: 'Playlist', extensions: ['m3u', 'm3u8', 'json'] },
+          { name: 'M3U Playlist', extensions: ['m3u', 'm3u8'] },
+          { name: 'Audion Playlist', extensions: ['json'] }
+        ]
       });
       if (!file) return;
 
       if (!invoke) return;
       const content = (await invoke('read_text_file', { path: file })) as string;
-      const tracks = JSON.parse(content);
+      const isM3u = /\.m3u8?$/i.test(file) || content.trimStart().startsWith('#EXTM3U');
+      const paths = isM3u
+        ? parseM3uPlaylist(content, file)
+        : JSON.parse(content)
+            .map((t: any) => t.path)
+            .filter((p: any) => !!p);
 
-      if (Array.isArray(tracks)) {
-        const paths = tracks.map((t: any) => t.path).filter((p: any) => !!p);
-        if (paths.length) {
-          await addPathsWrapper(paths);
-          showToast(`${paths.length}${dict.toast_loaded}`);
-        }
+      if (Array.isArray(paths)) {
+        if (!paths.length) throw new Error('No playlist entries');
+        await addPathsWrapper(paths);
+        switchPlaylistView('all');
+        showToast(`${paths.length}${dict.toast_loaded}`);
       } else {
         throw new Error('Invalid format');
       }
@@ -2067,6 +2193,7 @@ if (rootEl) {
     langSelect = document.getElementById('langSelect') as HTMLSelectElement | null;
     btnThemeDark = document.getElementById('btnThemeDark') as HTMLButtonElement | null;
     btnThemeLight = document.getElementById('btnThemeLight') as HTMLButtonElement | null;
+    layoutModeSelect = document.getElementById('layoutModeSelect') as HTMLSelectElement | null;
     updateChannelSelect = document.getElementById(
       'updateChannelSelect'
     ) as HTMLSelectElement | null;
@@ -2117,6 +2244,8 @@ if (rootEl) {
       '.settings-nav-btn'
     ) as NodeListOf<HTMLButtonElement>;
     settingsSections = document.querySelectorAll('.settings-section') as NodeListOf<HTMLDivElement>;
+    settingsSearchInput = document.getElementById('settingsSearch') as HTMLInputElement | null;
+    settingsSearchEmpty = document.getElementById('settingsSearchEmpty') as HTMLDivElement | null;
 
     compThreshold = document.getElementById('compThreshold') as HTMLInputElement | null;
     compKnee = document.getElementById('compKnee') as HTMLInputElement | null;
@@ -2202,6 +2331,7 @@ if (rootEl) {
 
     // Apply saved opacity
     updateLanguage(state.lang);
+    applyLayoutMode(state.layoutMode);
     setUiOpacity(uiOpacityValue);
     setUpdateChannel(state.updateChannel);
 

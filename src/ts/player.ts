@@ -12,6 +12,7 @@ export function savePlaylist(): void {
     path: t.path,
     addedAt: t.addedAt,
     playCount: t.playCount || 0,
+    lastPlayedAt: t.lastPlayedAt,
     favorite: t.favorite || false
   }));
   localStorage.setItem('af_playlist', JSON.stringify(minimalTracks));
@@ -43,6 +44,11 @@ export function playAudio(
     .play()
     .then(() => {
       state.playing = true;
+      if (state.current >= 0 && state.tracks[state.current]) {
+        state.tracks[state.current].lastPlayedAt = Date.now();
+        savePlaylist();
+        window.dispatchEvent(new CustomEvent('audion-play-history-changed'));
+      }
       updatePlayUI(true);
       if (albumArt) {
         albumArt.classList.add('spinning');

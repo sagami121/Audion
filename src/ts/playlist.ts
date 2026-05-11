@@ -9,11 +9,56 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const metaCache = new Map();
 
+function getPlaylistDir(path: string): string {
+  const index = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  return index >= 0 ? path.slice(0, index) : '';
+}
+
+function isAbsolutePath(path: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('\\\\') || path.startsWith('/');
+}
+
+function resolvePlaylistPath(entry: string, playlistPath: string): string {
+  const trimmed = entry.trim();
+  if (!trimmed || isAbsolutePath(trimmed)) return trimmed;
+
+  const baseDir = getPlaylistDir(playlistPath);
+  if (!baseDir) return trimmed;
+  const separator = baseDir.includes('\\') ? '\\' : '/';
+  return `${baseDir}${separator}${trimmed}`;
+}
+
+function formatM3uInfo(track: Track): string {
+  const duration = Number.isFinite(track.duration) ? Math.round(track.duration) : -1;
+  const title = track.artist ? `${track.artist} - ${track.name}` : track.name;
+  return `#EXTINF:${duration},${title}`;
+}
+
+export function serializeM3uPlaylist(tracks: Track[]): string {
+  const lines = ['#EXTM3U'];
+  tracks.forEach((track) => {
+    lines.push(formatM3uInfo(track), track.path);
+  });
+  return `${lines.join('\n')}\n`;
+}
+
+export function parseM3uPlaylist(content: string, playlistPath: string): string[] {
+  return content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => resolvePlaylistPath(line, playlistPath));
+}
+
 export function getPlaylistView(): { track: Track; globalIdx: number }[] {
   let list = state.tracks.map((track, globalIdx) => ({ track, globalIdx }));
 
   if (state.plView === 'recent') {
     list.sort((a, b) => b.track.addedAt - a.track.addedAt);
+  } else if (state.plView === 'recent_played') {
+    list = list
+      .filter((item) => item.track.lastPlayedAt)
+      .sort((a, b) => (b.track.lastPlayedAt || 0) - (a.track.lastPlayedAt || 0));
   } else if (state.plView === 'popular') {
     list.sort((a, b) => (b.track.playCount || 0) - (a.track.playCount || 0));
   } else if (state.plView === 'favorites') {
@@ -42,6 +87,8 @@ export async function addPaths(
     const pathValue = isObj ? item.path : item;
     const addedAt = isObj && item.addedAt ? item.addedAt : Date.now();
     const playCount = isObj && item.playCount ? item.playCount : 0;
+    const lastPlayedAt = isObj && item.lastPlayedAt ? item.lastPlayedAt : undefined;
+    const favorite = isObj && item.favorite ? item.favorite : false;
 
     const normPath = normalizePath(pathValue).toLowerCase();
     if (state.tracks.some((t) => normalizePath(t.path).toLowerCase() === normPath)) {
@@ -66,7 +113,9 @@ export async function addPaths(
           cover: meta.cover,
           duration: meta.duration || 0,
           addedAt,
-          playCount
+          playCount,
+          lastPlayedAt,
+          favorite
         });
 
         const idx = state.tracks.length - 1;
@@ -141,7 +190,9 @@ export async function loadPlaylist(
         const storedItems = JSON.parse(stored);
         if (storedItems.length) {
           const items = storedItems.map((item: any) =>
-            typeof item === 'string' ? { path: item, addedAt: Date.now(), playCount: 0 } : item
+            typeof item === 'string'
+              ? { path: item, addedAt: Date.now(), playCount: 0, lastPlayedAt: undefined }
+              : item
           );
           await addPathsFn(items, true);
         }

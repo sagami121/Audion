@@ -92,11 +92,21 @@ export function createPlaylistRow(
 
   const displayName = track.name;
   const displaySub = track.artist ? track.artist : '';
+  const coverThumb = track.cover
+    ? `<img class="pl-cover-img" src="${esc(track.cover)}" alt="" loading="lazy" />`
+    : `<span class="pl-cover-fallback" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="17" cy="16" r="3" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+      </span>`;
   li.innerHTML = `
     <span class="pl-num">${displayIdx + 1}</span>
     <span class="pl-bars">
       <span class="pl-bar"></span><span class="pl-bar"></span><span class="pl-bar"></span>
     </span>
+    <span class="pl-cover">${coverThumb}</span>
     <div class="pl-info">
       <span class="pl-name" title="${esc(displayName)}">
         ${esc(displayName)}
@@ -158,9 +168,12 @@ export function setupPlaylistRowEvents(row: HTMLLIElement, index: number): void 
     const cm = document.getElementById('contextMenu');
     if (!cm) return;
 
-    cmIndex = index;
+    if (state.plView !== 'all') {
+      cm.style.display = 'none';
+      return;
+    }
 
-    const canReorder = state.plView === 'all';
+    cmIndex = index;
 
     // Disable buttons if move is not possible
     const btnUp = document.getElementById('cmMoveUp');
@@ -168,22 +181,18 @@ export function setupPlaylistRowEvents(row: HTMLLIElement, index: number): void 
     const btnTop = document.getElementById('cmMoveTop');
     const btnBottom = document.getElementById('cmMoveBottom');
 
-    if (btnUp) (btnUp as HTMLElement).style.opacity = !canReorder || index === 0 ? '0.3' : '1';
-    if (btnUp)
-      (btnUp as HTMLElement).style.pointerEvents = !canReorder || index === 0 ? 'none' : 'auto';
+    if (btnUp) (btnUp as HTMLElement).style.opacity = index === 0 ? '0.3' : '1';
+    if (btnUp) (btnUp as HTMLElement).style.pointerEvents = index === 0 ? 'none' : 'auto';
 
-    if (btnTop) (btnTop as HTMLElement).style.opacity = !canReorder || index === 0 ? '0.3' : '1';
-    if (btnTop)
-      (btnTop as HTMLElement).style.pointerEvents = !canReorder || index === 0 ? 'none' : 'auto';
+    if (btnTop) (btnTop as HTMLElement).style.opacity = index === 0 ? '0.3' : '1';
+    if (btnTop) (btnTop as HTMLElement).style.pointerEvents = index === 0 ? 'none' : 'auto';
 
     const isLast = index === state.tracks.length - 1;
-    if (btnDown) (btnDown as HTMLElement).style.opacity = !canReorder || isLast ? '0.3' : '1';
-    if (btnDown)
-      (btnDown as HTMLElement).style.pointerEvents = !canReorder || isLast ? 'none' : 'auto';
+    if (btnDown) (btnDown as HTMLElement).style.opacity = isLast ? '0.3' : '1';
+    if (btnDown) (btnDown as HTMLElement).style.pointerEvents = isLast ? 'none' : 'auto';
 
-    if (btnBottom) (btnBottom as HTMLElement).style.opacity = !canReorder || isLast ? '0.3' : '1';
-    if (btnBottom)
-      (btnBottom as HTMLElement).style.pointerEvents = !canReorder || isLast ? 'none' : 'auto';
+    if (btnBottom) (btnBottom as HTMLElement).style.opacity = isLast ? '0.3' : '1';
+    if (btnBottom) (btnBottom as HTMLElement).style.pointerEvents = isLast ? 'none' : 'auto';
 
     cm.style.display = 'block';
 

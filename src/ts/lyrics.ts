@@ -3,6 +3,7 @@ import { translations } from './translations';
 import { invoke } from '@tauri-apps/api/core';
 
 let lyricsLoadId = 0;
+const lyricStateClasses = ['active', 'near', 'distant', 'past', 'future'];
 
 function parseTime(minutes: string, seconds: string): number {
   return parseInt(minutes, 10) * 60 + parseFloat(seconds);
@@ -15,6 +16,7 @@ export async function loadLyrics(path: string, lyricsInner: HTMLDivElement | nul
   if (lyricsInner) {
     lyricsInner.innerHTML = '';
     lyricsInner.style.transform = '';
+    lyricsInner.classList.remove('empty');
   }
 
   try {
@@ -77,8 +79,13 @@ export async function loadLyrics(path: string, lyricsInner: HTMLDivElement | nul
     if (loadId !== lyricsLoadId) return;
 
     const dict = translations[state.lang] || translations.ja;
-    if (lyricsInner)
-      lyricsInner.innerHTML = `<div class="lyric-line" style="opacity:0.5">${dict.no_lyrics}</div>`;
+    if (lyricsInner) {
+      lyricsInner.classList.add('empty');
+      const div = document.createElement('div');
+      div.className = 'lyric-line lyric-empty';
+      div.textContent = dict.no_lyrics;
+      lyricsInner.appendChild(div);
+    }
   }
 }
 
@@ -98,7 +105,21 @@ export function updateLyrics(time: number, lyricsInner: HTMLDivElement | null): 
     state.currentLyricIndex = index;
     const lines = lyricsInner.querySelectorAll('.lyric-line') as NodeListOf<HTMLElement>;
     lines.forEach((line, i) => {
-      line.classList.toggle('active', i === index);
+      line.classList.remove(...lyricStateClasses);
+
+      if (index === -1) {
+        line.classList.add('future');
+        return;
+      }
+
+      const distance = Math.abs(i - index);
+      if (distance === 0) {
+        line.classList.add('active');
+      } else if (distance <= 2) {
+        line.classList.add('near', i < index ? 'past' : 'future');
+      } else {
+        line.classList.add('distant', i < index ? 'past' : 'future');
+      }
     });
 
     if (index !== -1 && lines[index]) {
@@ -106,6 +127,7 @@ export function updateLyrics(time: number, lyricsInner: HTMLDivElement | null): 
       if (lyricsInner.parentElement) {
         const offset =
           lyricsInner.parentElement.clientHeight / 2 -
+          lyricsInner.offsetTop -
           activeLine.offsetTop -
           activeLine.clientHeight / 2;
         lyricsInner.style.transform = `translateY(${offset}px)`;
