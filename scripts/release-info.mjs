@@ -30,7 +30,10 @@ const notes = changelog
 const version = headerMatch[1];
 const date = headerMatch[2].trim();
 const tag = version;
-const prerelease = /\b(alpha|beta|rc|pre|preview|nightly|canary|dev)\b/i.test(version);
+const prereleaseId = version.split('-', 2)[1]?.split('+', 1)[0] ?? '';
+const prerelease = /^(alpha|beta|rc|pre|preview|nightly|canary|dev)(?:[.-]?\d.*|[.-].*)?$/i.test(
+  prereleaseId
+);
 
 if (outputPath) {
   fs.writeFileSync(outputPath, `${notes}\n`, 'utf8');

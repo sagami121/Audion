@@ -299,6 +299,7 @@ export const translations: Translations = {
     view_all: 'All',
     view_recent: 'Recent',
     view_recent_played: 'Recently Played',
+    view_recent_played: 'Recently Played',
     view_popular: 'Popular',
     view_favorites: 'Favorites',
     favorites: 'Favorites',
@@ -643,6 +644,10 @@ export const translations: Translations = {
     update_channel_hint: 'Beta 会优先检查预发布版本。'
   }
 };
+
+translations.ja.view_recent_played = '最近再生';
+translations.ko.view_recent_played = '최근 재생';
+translations.zh.view_recent_played = '最近播放';
 
 translations.ja.view_recent_played = '最近再生';
 translations.ko.view_recent_played = '최근 재생';
