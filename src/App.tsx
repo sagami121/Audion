@@ -291,12 +291,6 @@ const App: React.FC = () => {
               aria-live="polite"
               aria-label="Lyrics"
             >
-            <div
-              className="lyrics-container"
-              id="lyricsContainer"
-              aria-live="polite"
-              aria-label="Lyrics"
-            >
               <div className="lyrics-inner" id="lyricsInner"></div>
             </div>
           </div>
